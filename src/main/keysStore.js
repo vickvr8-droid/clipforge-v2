@@ -120,22 +120,48 @@ function guardarKey(app, { nombre, valor }) {
 
 function listarKeysSeguras(app) {
   // Para la UI: nunca exponer el valor completo, solo metadatos + ultimos 4.
-  return leerKeys(app).map(({ id, nombre, proveedor, ultimos4, creada }) => ({
-    id, nombre, proveedor, ultimos4, creada
+  // Aprovecha el listado para migrar a cifrado lo que quedo en plano.
+  return migrarACifrado(app).map((k) => ({
+    id: k.id,
+    nombre: k.nombre,
+    proveedor: k.proveedor,
+    ultimos4: k.ultimos4,
+    creada: k.creada,
+    cifrada: Boolean(k.valorCifrado),
+    // Si se cifro en otra maquina/cuenta ya no se puede leer: la UI lo
+    // marca para que el user sepa que tiene que volver a pegarla.
+    ilegible: Boolean(k.valorCifrado) && descifrar(k) === null
   }));
 }
 
 function eliminarKey(app, id) {
-  const keys = leerKeys(app).filter((k) => k.id !== id);
-  fs.writeFileSync(getKeysPath(app), JSON.stringify(keys, null, 2), 'utf-8');
+  escribirKeys(app, leerKeys(app).filter((k) => k.id !== id));
   return true;
 }
 
 function obtenerValorKey(app, id) {
-  // Uso INTERNO del proceso principal (ej. para llamar a Descript),
+  // Uso INTERNO del proceso principal (ej. para llamar a OpenRouter),
   // nunca se expone directo al renderer via IPC.
   const k = leerKeys(app).find((k) => k.id === id);
-  return k ? k.valor : null;
+  return k ? descifrar(k) : null;
 }
 
-module.exports = { detectarProveedor, guardarKey, listarKeysSeguras, eliminarKey, obtenerValorKey };
+// Devuelve la primera key utilizable de un proveedor. Lo usa el analisis
+// con LLM para no obligar al user a elegir la key en cada corrida.
+function obtenerValorPorProveedor(app, proveedor) {
+  for (const k of leerKeys(app)) {
+    if (k.proveedor !== proveedor) continue;
+    const valor = descifrar(k);
+    if (valor) return valor;
+  }
+  return null;
+}
+
+module.exports = {
+  detectarProveedor,
+  guardarKey,
+  listarKeysSeguras,
+  eliminarKey,
+  obtenerValorKey,
+  obtenerValorPorProveedor
+};
