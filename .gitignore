@@ -1,15 +1,12 @@
-# v0 sandbox internal files
-__v0_runtime_loader.js
-__v0_devtools.tsx
-__v0_jsx-dev-runtime.ts
-.snowflake/
-.v0-trash/
-.vercel/
+node_modules/
+dist/
+*.log
+.env
 
-# Environment variables
-.env*.local
-
-# Common ignores
-node_modules
-.next/
-.DS_Store
+# Datos de proyectos guardados (persistencia, pedido 29/07/2026) - son
+# datos generados por el USO de la app (transcripciones reales del video
+# del user), no codigo fuente - mismo criterio que ya se aplicaba a los
+# .cortes.json/.recuadros.json (esos se generan al lado del video en
+# E:\, nunca se comitearon). D:\ClipForge\proyectos\ queda igual: parte
+# del repo en disco, pero fuera de git.
+proyectos/
