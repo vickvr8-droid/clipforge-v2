@@ -59,7 +59,12 @@ function rangosConservados(blocks, trim, duracionFuente) {
 
   let inicio = 0;
   let fin = dur;
-  if (trim && trim.fin > trim.inicio) {
+  // El recorte solo se aplica si esta ACTIVO (el checkbox "Reproducir
+  // solo el recorte"). Con el checkbox apagado las manijas siguen
+  // marcadas en la timeline como referencia visual, pero se exporta el
+  // video completo - antes se recortaba igual y el user se encontraba con
+  // un mp4 mucho mas corto de lo que esperaba, sin ningun aviso.
+  if (trim && trim.activo && trim.fin > trim.inicio) {
     inicio = Math.max(0, trim.inicio);
     fin = Math.min(dur || trim.fin, trim.fin);
   }
@@ -108,9 +113,29 @@ function puntosDeCorte(clips, desde, hasta) {
 // stream intermedio. Se redondea hacia arriba al par mas cercano: si
 // sobra un pixel preferimos un solape invisible entre celdas vecinas
 // antes que una costura negra de 1px.
+// Redondea SIEMPRE HACIA ABAJO al par mas cercano (minimo 2).
+// Es importante que sea hacia abajo y no al par mas cercano: aPar() se
+// aplica sobre valores ya clampeados contra el tamano de la fuente
+// (ej. aPar(Math.min(csw, fuente.ancho))), asi que redondear hacia
+// arriba podia devolver 1px MAS que el original y hacer que ffmpeg
+// falle con "Invalid too big or non positive size for width/height".
+// Perder 1px de recorte no se ve; un crop fuera de rango rompe el export.
 function aPar(n) {
-  const v = Math.max(2, Math.round(n));
-  return v % 2 === 0 ? v : v + 1;
+  const v = Math.floor(n);
+  if (!(v > 2)) return 2; // nunca 0 ni negativo
+  return v % 2 === 0 ? v : v - 1;
+}
+
+// Igual que aPar() pero para OFFSETS (x/y del crop), donde 0 SI es un
+// valor valido - por eso no puede usar aPar(), que tiene piso 2.
+// Los offsets tambien tienen que ser pares: el video sale en yuv420
+// (croma submuestreado 2x2), y cortar en un pixel impar desalinea el
+// plano de color respecto al de luma, lo que se ve como un leve
+// corrimiento de tinte en los bordes del recuadro.
+function aParOffset(n) {
+  const v = Math.floor(n);
+  if (!(v > 0)) return 0;
+  return v % 2 === 0 ? v : v - 1;
 }
 
 // Recorte "cover": misma matematica que dibujarCanvas916() en el
@@ -141,8 +166,8 @@ function recorteCover(clip, fuente, destW, destH) {
   // size for width/height".
   let w = aPar(Math.min(csw, fuente.ancho));
   let h = aPar(Math.min(csh, fuente.alto));
-  let x = Math.round(Math.max(0, Math.min(csx, fuente.ancho - w)));
-  let y = Math.round(Math.max(0, Math.min(csy, fuente.alto - h)));
+  let x = aParOffset(Math.max(0, Math.min(csx, fuente.ancho - w)));
+  let y = aParOffset(Math.max(0, Math.min(csy, fuente.alto - h)));
   return { x, y, w, h };
 }
 
@@ -160,8 +185,8 @@ function recorteCentrado(fuente, destW, destH) {
   const wp = aPar(Math.min(w, fuente.ancho));
   const hp = aPar(Math.min(h, fuente.alto));
   return {
-    x: Math.round(Math.max(0, (fuente.ancho - wp) / 2)),
-    y: Math.round(Math.max(0, (fuente.alto - hp) / 2)),
+    x: aParOffset(Math.max(0, (fuente.ancho - wp) / 2)),
+    y: aParOffset(Math.max(0, (fuente.alto - hp) / 2)),
     w: wp,
     h: hp
   };

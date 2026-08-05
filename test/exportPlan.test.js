@@ -114,6 +114,45 @@ test('recorteCentrado da una franja 9:16 centrada', () => {
   assert.strictEqual(r.x, aPar((1920 - r.w) / 2));
 });
 
+// Regresion: aPar() redondeaba al par MAS CERCANO, asi que podia devolver
+// 1px mas que el valor recibido. Como se aplica sobre valores ya limitados
+// al tamano de la fuente, el crop terminaba pidiendo 1px fuera del cuadro y
+// ffmpeg abortaba con "Invalid too big or non positive size".
+test('aPar nunca devuelve mas de lo que recibio', () => {
+  for (let n = 2; n <= 400; n++) assert.ok(aPar(n) <= n, `aPar(${n})=${aPar(n)} > ${n}`);
+});
+
+// Regresion: los offsets x/y salian de Math.round(), asi que podian quedar
+// impares. Con yuv420 (croma 2x2) un offset impar desalinea el plano de
+// color y se ve un corrimiento de tinte en el borde del recuadro.
+test('los offsets del crop son pares y no se salen de la fuente', () => {
+  const casos = [
+    { xPct: 0.1234, yPct: 0.4321, wPct: 0.3, hPct: 0.3 },
+    { xPct: 0.5001, yPct: 0.0007, wPct: 0.2, hPct: 0.9 },
+    { xPct: 0.9, yPct: 0.9, wPct: 0.5, hPct: 0.5 }
+  ];
+  for (const rect of casos) {
+    const r = recorteCover(clip('a', 0, 1, 0, rect), FUENTE, 1080, 1920);
+    assert.strictEqual(r.x % 2, 0, `x impar: ${r.x}`);
+    assert.strictEqual(r.y % 2, 0, `y impar: ${r.y}`);
+    assert.ok(r.x + r.w <= FUENTE.ancho && r.y + r.h <= FUENTE.alto);
+  }
+  const rc = recorteCentrado(FUENTE, 1080, 1920);
+  assert.strictEqual(rc.x % 2, 0);
+  assert.strictEqual(rc.y % 2, 0);
+});
+
+// Regresion: con el checkbox "Reproducir solo el recorte" APAGADO el export
+// igual recortaba, y salia un mp4 mucho mas corto sin ningun aviso.
+test('un trim inactivo no acorta la duracion exportada', () => {
+  const clips = [clip('a', 0, 30, 0, RECT_COMPLETO)];
+  const base = { blocks: [], clips, cellLayouts: {}, fuente: FUENTE, opciones: { ancho: 1080, alto: 1920, sinRecuadro: 'centrar' } };
+  const inactivo = planificarExportacion({ ...base, trim: { activo: false, inicio: 10, fin: 20 } });
+  const activo = planificarExportacion({ ...base, trim: { activo: true, inicio: 10, fin: 20 } });
+  assert.strictEqual(inactivo.duracionSalida, 30);
+  assert.strictEqual(activo.duracionSalida, 10);
+});
+
 test('celdasAPixeles convierte a pixeles pares dentro del lienzo', () => {
   const celdas = [{ pos: 0, x: 0, y: 0, w: 1, h: 0.5 }, { pos: 1, x: 0, y: 0.5, w: 1, h: 0.5 }];
   const px = celdasAPixeles(celdas, 1080, 1920);

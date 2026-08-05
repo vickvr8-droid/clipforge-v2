@@ -320,7 +320,11 @@
     .panelGUI.horizontal { display: inline-block; vertical-align: top; width: 48%; margin-right: 2%; }
     .panelGUI.vertical { display: block; width: 100%; }
     .panelGUI.arrastrando { z-index: 100; box-shadow: 0 12px 30px rgba(0,0,0,0.6); background: #14161c; }
-    .panelGUI.alturaFija .panelBody { overflow-y: auto; height: calc(100% - 40px); }
+    /* Con altura fija el body scrollea. El descuento de la cabecera solo
+       aplica en modo GUI: fuera de el la cabecera esta display:none, y
+       restarle 40px igual dejaba una franja muerta al pie del panel. */
+    .panelGUI.alturaFija .panelBody { overflow-y: auto; height: 100%; }
+    body.modoGUI .panelGUI.alturaFija .panelBody { height: calc(100% - 46px); }
     .panelHeaderGUI {
       display: none; align-items: center; gap: 10px; padding: 6px 10px; margin-bottom: 8px;
       background: #1a1d24; border: 1px solid #2a2e37; border-radius: 6px; user-select: none;

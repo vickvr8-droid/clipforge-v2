@@ -154,3 +154,139 @@ de esperar ver un error visible.
 ## Pendiente
 Confirmar con el user que el doble-clic en `ClipForge.lnk` abre la
 app bien de punta a punta.
+
+
+# ============================================================
+# 30. IMPLEMENTADO 04/08/2026 (sesion v0, posterior a la anterior del
+# mismo dia) — la suite de tests estaba ROTA y tapando 3 bugs reales de
+# exportacion + auditoria del sistema de paneles GUI (deuda de la 28.3)
+# ============================================================
+
+## 30.1 Punto de partida
+No hubo pedido de feature nueva ("segui avanzando"). Se arranco
+corriendo lo que ya existia antes de escribir nada, y el estado real
+era peor de lo que decia el MD: `npm test` no corria NINGUN test y
+habia 3 bugs de aritmetica de exportacion sin detectar.
+
+## 30.2 `npm test` estaba roto de entrada (Node 24)
+El script era `node --test test/`. Node 24 ya no acepta un DIRECTORIO
+como argumento de `--test`: intenta importarlo como modulo ESM y tira
+`ERR_UNSUPPORTED_DIR_IMPORT`. Resultado: `npm test` terminaba en rojo
+con `tests 1 / fail 1` sin haber ejecutado ni uno de los 28 tests
+reales del archivo. Fix: `node --test "test/*.test.js"` (con las
+comillas, para que el glob lo expanda Node y no el shell - si no, en
+Windows/cmd no expande y falla).
+**Leccion**: los 28 tests de la seccion 29 nunca se vieron correr en
+verde; se dieron por buenos porque el comando "existia".
+
+## 30.3 BUG 1 (grave, rompia el export) — `aPar()` redondeaba PARA ARRIBA
+`aPar()` hacia `Math.round()` al par mas cercano, asi que `aPar(1081)`
+daba **1082**: UN PIXEL MAS que lo recibido. Se usa siempre sobre
+valores ya limitados al tamano de la fuente
+(`aPar(Math.min(csw, fuente.ancho))`), asi que en un video de 1920x1080
+podia pedirle a ffmpeg un crop de 1082px de alto sobre 1080 reales ->
+`Invalid too big or non positive size for width/height`, es decir el
+export se cae. Fix: redondeo hacia ABAJO (`Math.floor` + bajar al par),
+con piso 2. Perder 1px de recorte no se ve; un crop fuera de rango
+aborta el render.
+
+## 30.4 BUG 2 (silencioso, el peor de los tres) — el recorte se
+## aplicaba al export aunque estuviera DESACTIVADO
+`rangosConservados()` preguntaba `if (trim && trim.fin > trim.inicio)`
+sin mirar **`trim.activo`**. O sea: el checkbox "Reproducir solo el
+recorte" de la seccion 28.5 solo controlaba la REPRODUCCION; para el
+export el recorte estaba siempre activo. Con el checkbox apagado y las
+manijas movidas (algo normal, quedan marcadas como referencia visual),
+el user exportaba y le salia un mp4 mucho mas corto de lo pedido, sin
+ningun mensaje. Fix: `if (trim && trim.activo && ...)`. Nota de diseno
+confirmada: el flag `activo` YA se persistia bien end-to-end
+(`renderer.js` -> `preload.trimActualizar` -> `trim:actualizar` en
+`main.js` -> `proyecto.json`); el unico que lo ignoraba era el
+planificador.
+
+## 30.5 BUG 3 (calidad de imagen) — offsets de crop impares
+`x`/`y` del crop salian de `Math.round()`, asi que podian quedar
+impares. La salida es yuv420 (croma submuestreado 2x2): cortar en un
+pixel impar desalinea el plano de color respecto al de luma y se ve un
+leve corrimiento de tinte en el borde del recuadro. Fix: funcion nueva
+`aParOffset()` - igual que `aPar()` pero con piso **0** en vez de 2,
+porque para un offset 0 SI es valido (`aPar()` no servia: habria
+forzado x=2 en un recuadro pegado al borde izquierdo). Aplicada en
+`recorteCover()` y `recorteCentrado()`.
+
+## 30.6 Tests agregados (3 nuevos, total 31 en verde)
+- `aPar nunca devuelve mas de lo que recibio`: loop 2..400, bloquea la
+  regresion del BUG 1 en TODOS los valores, no en un caso puntual.
+- `los offsets del crop son pares y no se salen de la fuente`.
+- `un trim inactivo no acorta la duracion exportada`: compara
+  `duracionSalida` con `activo:false` (30s) vs `activo:true` (10s)
+  sobre el mismo plan - es el test que faltaba para el BUG 2.
+
+## 30.7 Auditoria del sistema de paneles GUI (la deuda de la 28.3)
+Se leyo completo el bloque (`renderer.js` ~1640-1900 + CSS de
+`index.html`). **Que es**: cada seccion grande (Visor, Resumen,
+Transcripcion, Exportar, Analisis IA, API Keys) lleva
+`data-panel-id`/`data-panel-titulo`; al arrancar,
+`inicializarPanelesGUI()` mueve los hijos de cada una a un `.panelBody`
+y le inyecta una cabecera (drag handle + horizontal/vertical/contraer/
+ocultar) + manija de resize. La cabecera solo se ve con
+`body.modoGUI` (boton "GUI"), el boton "Ver" da los checkboxes de
+visibilidad + "Restablecer disposicion", y todo se persiste en
+localStorage (`clipforge_panel_layout_v1`, NO en `proyecto.json`: es
+preferencia de la ventana, no del proyecto).
+
+**4 defectos encontrados y arreglados**:
+1. `.panelGUI.arrastrando` (sombra + z-index) estaba en el CSS pero el
+   JS nunca la ponia: arrastrar no daba NINGUN feedback visual. Se
+   agrega en `setTimeout(0)` (si se cambia el estilo dentro del
+   `dragstart`, Chromium ya capturo el drag image y la sombra sale
+   congelada pegada al cursor) y se limpia en `dragend` - no en `drop`,
+   porque `drop` no dispara si el arrastre se cancela con Escape o se
+   suelta afuera, y el panel quedaba con la sombra puesta para siempre.
+2. `dropPanel()` decidia antes/despues SIEMPRE con `ev.clientY`. Con
+   paneles en modo `horizontal` (quedan lado a lado, `width:48%`) el
+   eje correcto es el X: reordenar dos paneles horizontales daba un
+   resultado al azar segun la altura del cursor. Ahora el eje se elige
+   segun `destino.classList.contains('horizontal')`.
+3. `.panelAccion.activo` (fondo azul) tambien estaba en el CSS sin
+   usarse: los 4 botones se veian identicos y no habia forma de saber
+   si un panel estaba en horizontal o vertical sin medir el ancho a
+   ojo. Se agrego `sincronizarBotonesPanel()`, llamada al restaurar el
+   layout, en cada accion y en el reset. De paso el caret de "contraer"
+   ahora apunta segun la accion que hace (no segun el estado).
+4. "Restablecer disposicion" borraba localStorage y limpiaba las clases
+   pero NO devolvia el ORDEN original: los nodos quedaban movidos en el
+   DOM, asi que el orden viejo seguia en pantalla hasta reiniciar la
+   app - y peor, la siguiente accion cualquiera lo volvia a persistir
+   con `guardarLayoutGUI()`. Se agrego `ordenOriginalPaneles` (capturado
+   del HTML ANTES de aplicar el orden guardado) y el reset reordena el
+   DOM con eso.
+
+Ademas, dos consistencias menores: un panel sin nada guardado ahora
+arranca con la clase `vertical` EXPLICITA (antes se hacia `return` y
+quedaba sin ninguna de las dos - funcionaba de casualidad porque un div
+ya es block, pero el estado inicial y el "restablecido" no eran el
+mismo), y `.alturaFija .panelBody` ya no resta 40px de cabecera fuera
+del modo GUI (donde la cabecera es `display:none`), que dejaba una
+franja muerta al pie del panel.
+
+## 30.8 Verificacion — que se probo y que NO
+**Probado de verdad**: `npm test` 31/31 en verde, y `node --check` sobre
+`renderer.js`, `exportPlan.js` y `main.js`.
+**NO probado en pantalla**: los 4 arreglos de paneles (30.7) son de
+DOM/CSS y no hay test automatico que los cubra. Se intento levantar el
+renderer en un browser con un stub de `window.clipForge`, pero el
+navegador del entorno v0 no puede alcanzar un puerto arbitrario del
+sandbox y esto es una app Electron, no una web. **Pendiente para el
+user**: abrir ClipForge, activar "GUI" y confirmar (a) que al arrastrar
+se ve la sombra y desaparece al soltar/cancelar, (b) que reordenar dos
+paneles puestos en horizontal respeta el lado donde se sueltan, (c) que
+el boton horizontal/vertical activo se ve resaltado, (d) que
+"Restablecer disposicion" devuelve el orden del HTML sin reiniciar.
+
+## 30.9 Leccion transversable al resto del proyecto
+Los 3 bugs vivian en el modulo con MAS comentarios explicativos del
+repo y con 28 tests escritos, pero el comando que los corria estaba
+roto - nadie los habia visto pasar. Antes de dar por bueno cualquier
+modulo "ya testeado", correr la suite y mirar el conteo real de
+`pass`/`fail`, no que el script exista.

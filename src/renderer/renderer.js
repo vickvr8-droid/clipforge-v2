@@ -1644,6 +1644,9 @@ const btnVer = document.getElementById('btnVer');
 const panelVerLista = document.getElementById('panelVerLista');
 const panelesContainer = document.getElementById('panelesContainer');
 let panelesRegistro = []; // [{id, titulo, el}]
+// Orden en que los paneles aparecen en el HTML, capturado ANTES de aplicar
+// el orden guardado. Es la referencia para "Restablecer disposicion".
+let ordenOriginalPaneles = [];
 let resizePanelState = null;
 
 function cargarLayoutGUI() {
@@ -1698,6 +1701,7 @@ function inicializarPanelesGUI() {
     el.appendChild(handle);
     return { id, titulo, el };
   });
+  ordenOriginalPaneles = panelesRegistro.map((p) => p.id);
   // aplicar disposicion guardada (orden, horizontal/vertical, contraido, oculto, alto)
   const conOrden = panelesRegistro.slice().sort((a, b) => {
     const oa = guardado[a.id] ? guardado[a.id].orden : 999;
@@ -1708,17 +1712,28 @@ function inicializarPanelesGUI() {
   panelesRegistro = conOrden;
   panelesRegistro.forEach((p) => {
     const g = guardado[p.id];
-    if (!g) return;
-    p.el.classList.toggle('horizontal', g.layout === 'horizontal');
-    p.el.classList.toggle('vertical', g.layout !== 'horizontal');
-    p.el.classList.toggle('contraido', !!g.contraido);
-    p.el.classList.toggle('oculto', !!g.oculto);
-    if (g.alto) { p.el.classList.add('alturaFija'); p.el.style.height = g.alto; }
+    // Sin nada guardado el panel arranca en 'vertical' EXPLICITO. Antes se
+    // hacia "return" y el panel quedaba sin ninguna de las dos clases:
+    // funcionaba de casualidad porque un div ya es block, pero el boton
+    // "vertical" no podia mostrarse como activo y "Restablecer
+    // disposicion" si dejaba la clase, con lo cual el estado inicial y el
+    // restablecido no eran el mismo.
+    if (!g) {
+      p.el.classList.add('vertical');
+    } else {
+      p.el.classList.toggle('horizontal', g.layout === 'horizontal');
+      p.el.classList.toggle('vertical', g.layout !== 'horizontal');
+      p.el.classList.toggle('contraido', !!g.contraido);
+      p.el.classList.toggle('oculto', !!g.oculto);
+      if (g.alto) { p.el.classList.add('alturaFija'); p.el.style.height = g.alto; }
+    }
+    sincronizarBotonesPanel(p.el);
   });
   panelesContainer.addEventListener('click', clicAccionPanel);
   panelesContainer.addEventListener('dragstart', dragStartPanel);
   panelesContainer.addEventListener('dragover', dragOverPanel);
   panelesContainer.addEventListener('drop', dropPanel);
+  panelesContainer.addEventListener('dragend', dragEndPanel);
   panelesContainer.addEventListener('mousedown', mousedownResizePanel);
   if (btnGUI) btnGUI.addEventListener('click', toggleModoGUI);
   if (btnVer) btnVer.addEventListener('click', toggleMenuVer);
@@ -1746,7 +1761,29 @@ function clicAccionPanel(ev) {
   } else if (accion === 'ocultar') {
     panelEl.classList.add('oculto');
   }
+  sincronizarBotonesPanel(panelEl);
   guardarLayoutGUI();
+}
+
+// La clase .panelAccion.activo ya estaba definida en el CSS pero nunca se
+// asignaba: los 4 botones se veian identicos siempre, asi que en un panel
+// no habia forma de saber si estaba en horizontal o en vertical sin
+// deducirlo mirando el ancho. Se refleja el estado real del panel.
+function sincronizarBotonesPanel(panelEl) {
+  const esHorizontal = panelEl.classList.contains('horizontal');
+  const contraido = panelEl.classList.contains('contraido');
+  panelEl.querySelectorAll(':scope > .panelHeaderGUI .panelAccion').forEach((b) => {
+    const a = b.dataset.accion;
+    if (a === 'horizontal') b.classList.toggle('activo', esHorizontal);
+    else if (a === 'vertical') b.classList.toggle('activo', !esHorizontal);
+    else if (a === 'contraer') {
+      b.classList.toggle('activo', contraido);
+      // El caret tiene que apuntar en el sentido de la accion que hace,
+      // no en el del estado: contraido -> "expandir" (abajo).
+      b.innerHTML = contraido ? '&#8964;' : '&#8963;';
+      b.title = contraido ? 'Expandir' : 'Contraer';
+    }
+  });
 }
 
 function dragStartPanel(ev) {
@@ -1755,9 +1792,22 @@ function dragStartPanel(ev) {
   const panelEl = handle.closest('.panelGUI');
   ev.dataTransfer.setData('text/plain', panelEl.dataset.panelId);
   ev.dataTransfer.effectAllowed = 'move';
+  // La clase .arrastrando ya existia en el CSS (sombra + z-index) pero
+  // nunca se aplicaba, asi que arrastrar no daba ningun feedback visual:
+  // el panel se quedaba igual y no se sabia cual se estaba moviendo.
+  // Se agrega en un setTimeout(0) porque si se cambia el estilo del nodo
+  // DENTRO del dragstart, Chromium ya tomo el "drag image" del elemento
+  // y a veces sale la sombra congelada pegada al cursor.
+  setTimeout(() => panelEl.classList.add('arrastrando'), 0);
 }
 function dragOverPanel(ev) {
   if (ev.target.closest('.panelGUI')) ev.preventDefault();
+}
+// dragend dispara SIEMPRE (incluso si se suelta afuera o se cancela con
+// Escape), a diferencia de drop - por eso la limpieza visual va aca y no
+// en dropPanel, que no corre si el arrastre se aborta.
+function dragEndPanel() {
+  panelesRegistro.forEach((p) => p.el.classList.remove('arrastrando'));
 }
 function dropPanel(ev) {
   const destino = ev.target.closest('.panelGUI');
@@ -1767,10 +1817,17 @@ function dropPanel(ev) {
   const origen = panelesRegistro.find((p) => p.id === origenId);
   if (!origen || origen.el === destino) return;
   const rect = destino.getBoundingClientRect();
-  const despues = ev.clientY > rect.top + rect.height / 2;
+  // El eje de comparacion tiene que seguir al eje en el que estan
+  // apilados los paneles: si el destino esta en 'horizontal' quedan lado
+  // a lado, y usar clientY (como se hacia antes) daba un resultado
+  // aleatorio segun donde caia el cursor en la altura del panel.
+  const despues = destino.classList.contains('horizontal')
+    ? ev.clientX > rect.left + rect.width / 2
+    : ev.clientY > rect.top + rect.height / 2;
   destino.parentNode.insertBefore(origen.el, despues ? destino.nextSibling : destino);
   panelesRegistro = Array.from(panelesContainer.querySelectorAll('[data-panel-id]'))
-    .map((el) => panelesRegistro.find((p) => p.el === el));
+    .map((el) => panelesRegistro.find((p) => p.el === el))
+    .filter(Boolean);
   guardarLayoutGUI();
 }
 
@@ -1822,10 +1879,20 @@ function renderMenuVer() {
   if (btnReset) btnReset.addEventListener('click', () => {
     localStorage.removeItem(LAYOUT_KEY);
     panelesRegistro.forEach((p) => {
-      p.el.classList.remove('horizontal', 'contraido', 'oculto', 'alturaFija');
+      p.el.classList.remove('horizontal', 'contraido', 'oculto', 'alturaFija', 'arrastrando');
       p.el.classList.add('vertical');
       p.el.style.height = '';
+      sincronizarBotonesPanel(p.el);
     });
+    // "Restablecer" tambien tiene que devolver el ORDEN original, no solo
+    // el tamano/visibilidad: antes se borraba la clave de localStorage
+    // pero los nodos quedaban movidos en el DOM, asi que el orden viejo
+    // seguia en pantalla hasta reiniciar la app (y si el user tocaba
+    // cualquier otra accion, guardarLayoutGUI lo volvia a persistir).
+    panelesRegistro = ordenOriginalPaneles
+      .map((id) => panelesRegistro.find((p) => p.id === id))
+      .filter(Boolean);
+    panelesRegistro.forEach((p) => panelesContainer.appendChild(p.el));
     renderMenuVer();
   });
 }

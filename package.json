@@ -7,7 +7,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron . --enable-logging",
-    "test": "node --test test/",
+    "test": "node --test \"test/*.test.js\"",
     "dist": "electron-builder"
   },
   "devDependencies": {
