@@ -19,6 +19,15 @@ const {
   layoutPorDefecto, actualizarRatioEnPath, distribuirProporcional,
   moverCeldaLibre, redimensionarCeldaLibre
 } = require('./cropLayoutsBuilder');
+// --- Exportacion real a video (ffmpeg) — modulo que ya existia como
+// codigo standalone (planificarExportacion + exportRunner.ejecutar) pero
+// NUNCA estuvo conectado aca (bug real encontrado 05/08/2026, "feature
+// invisible": el backend/tests existian, cero wiring de IPC/UI). Se
+// conecta recien ahora, ver CTX_PROYECTO_CLIPFORGE_1D.md.
+const { probe } = require('./mediaProbe');
+const { planificarExportacion } = require('./exportPlan');
+const exportRunner = require('./exportRunner');
+const settingsStore = require('./settingsStore');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -441,6 +450,57 @@ ipcMain.handle('recuadros:exportar-json', (event, inputPath) => {
   return { ok: true, path: outPath };
 });
 
+// --- Exportacion real a video (05/08/2026, wiring nuevo - ver nota en
+// los requires de arriba). "preflight" arma el plan SIN renderizar nada
+// (para que la UI muestre "esto va a generar 8 segmentos, 47s de salida"
+// antes de comprometerse a un export que puede tardar minutos), "iniciar"
+// corre el render real reportando progreso.
+ipcMain.handle('export:ajustes-obtener', () => ({
+  exportacion: settingsStore.leer().exportacion,
+  binarios: settingsStore.verificarBinarios()
+}));
+
+ipcMain.handle('export:ajustes-guardar', (event, cambios) => {
+  const nuevo = settingsStore.guardar({ exportacion: cambios || {} });
+  return nuevo.exportacion;
+});
+
+async function armarPlanExportacion(inputPath, opciones) {
+  const blocks = cutsState.get(inputPath);
+  if (!blocks || !blocks.length) return { ok: false, error: 'No hay transcripcion/cortes para este archivo todavia.' };
+  const clips = layoutsState.get(inputPath) || [];
+  const cellLayouts = cellLayoutsState.get(inputPath) || {};
+  const trim = trimState.get(inputPath) || null;
+  const fuente = await probe(inputPath);
+  const plan = planificarExportacion({ blocks, clips, cellLayouts, trim, fuente, opciones });
+  return { ok: plan.ok !== false, plan, blocks, fuente };
+}
+
+ipcMain.handle('export:preflight', async (event, { inputPath, opciones }) => {
+  try {
+    const { ok, plan, error } = await armarPlanExportacion(inputPath, opciones);
+    if (!ok) return { ok: false, error: error || plan.error };
+    return { ok: true, plan };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+ipcMain.handle('export:iniciar', async (event, { inputPath, opciones, outputPath }) => {
+  if (exportRunner.hayExportEnCurso()) return { ok: false, error: 'Ya hay una exportacion en curso.' };
+  try {
+    const { ok, plan, blocks, error } = await armarPlanExportacion(inputPath, opciones);
+    if (!ok) return { ok: false, error: error || plan.error };
+    const onProgress = (data) => mainWindow.webContents.send('export-progreso', data);
+    const resultado = await exportRunner.ejecutar({ plan, inputPath, blocks, outputPath, onProgress });
+    return resultado;
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+ipcMain.handle('export:cancelar', () => ({ ok: exportRunner.cancelar() }));
+
 ipcMain.handle('proyectos:listar', () => listarProyectos());
 
 ipcMain.handle('proyectos:abrir', (event, inputPath) => {
@@ -461,6 +521,7 @@ ipcMain.handle('keys:guardar', (event, { nombre, valor }) => guardarKey(app, { n
 ipcMain.handle('keys:eliminar', (event, id) => eliminarKey(app, id));
 
 app.whenReady().then(() => {
+  settingsStore.inicializar(app);
   mainWindow = createWindow();
 
   app.on('activate', () => {

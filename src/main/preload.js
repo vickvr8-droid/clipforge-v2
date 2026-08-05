@@ -50,6 +50,17 @@ contextBridge.exposeInMainWorld('clipForge', {
   trimActualizar: (inputPath, inicio, fin, duracionTotal, activo) => ipcRenderer.invoke('trim:actualizar', { inputPath, inicio, fin, duracionTotal, activo }),
   proyectosListar: () => ipcRenderer.invoke('proyectos:listar'),
   proyectosAbrir: (inputPath) => ipcRenderer.invoke('proyectos:abrir', inputPath),
+  // Exportacion real a video (05/08/2026, wiring nuevo - backend ya
+  // existia standalone, ver nota en main.js). "Preflight" arma el plan
+  // sin renderizar (para mostrar un resumen antes de exportar de verdad).
+  exportAjustesObtener: () => ipcRenderer.invoke('export:ajustes-obtener'),
+  exportAjustesGuardar: (cambios) => ipcRenderer.invoke('export:ajustes-guardar', cambios),
+  exportPreflight: (inputPath, opciones) => ipcRenderer.invoke('export:preflight', { inputPath, opciones }),
+  exportIniciar: (inputPath, opciones, outputPath) => ipcRenderer.invoke('export:iniciar', { inputPath, opciones, outputPath }),
+  exportCancelar: () => ipcRenderer.invoke('export:cancelar'),
+  onExportProgreso: (callback) => {
+    ipcRenderer.on('export-progreso', (event, data) => callback(data));
+  },
   onProgreso: (callback) => {
     ipcRenderer.on('transcripcion-progreso', (event, data) => callback(data));
   }

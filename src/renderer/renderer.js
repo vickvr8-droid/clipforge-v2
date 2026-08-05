@@ -1544,6 +1544,61 @@ btnExportSrt.addEventListener('click', async () => {
   estado.textContent = r.ok ? `SRT exportado en: ${r.path}` : `Error: ${r.error}`;
 });
 
+// --- Exportacion real a video (05/08/2026) - renderiza el short vertical
+// final con ffmpeg (bloques cortados + recuadros 16:9->9:16 + recorte),
+// usando el modulo exportPlan.js/exportRunner.js que ya existia como
+// codigo standalone pero nunca estuvo conectado a la interfaz (bug real
+// encontrado esta sesion, ver CTX_PROYECTO_CLIPFORGE_1D.md). Ajustes de
+// export (ancho/alto/crf/etc.) se usan tal cual estan guardados en
+// settingsStore - no hay panel de ajustes todavia, pendiente si el user
+// lo pide.
+const btnExportVideo = document.getElementById('btnExportVideo');
+const btnCancelarExportVideo = document.getElementById('btnCancelarExportVideo');
+const exportVideoEstado = document.getElementById('exportVideoEstado');
+const exportVideoBarraWrap = document.getElementById('exportVideoBarraWrap');
+const exportVideoBarra = document.getElementById('exportVideoBarra');
+
+function fijarEstadoExportVideo(texto, pct) {
+  exportVideoEstado.textContent = texto || '';
+  if (typeof pct === 'number') {
+    exportVideoBarraWrap.style.display = 'block';
+    exportVideoBarra.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  } else {
+    exportVideoBarraWrap.style.display = 'none';
+  }
+}
+
+window.clipForge.onExportProgreso((data) => {
+  if (!data) return;
+  if (data.fase === 'error') { fijarEstadoExportVideo(`Error: ${data.mensaje}`); return; }
+  if (data.fase === 'cancelado') { fijarEstadoExportVideo('Exportacion cancelada.'); return; }
+  fijarEstadoExportVideo(data.mensaje || '', data.porcentaje);
+});
+
+btnExportVideo.addEventListener('click', async () => {
+  if (!archivoActual) return;
+  btnExportVideo.disabled = true;
+  btnCancelarExportVideo.style.display = 'inline-block';
+  fijarEstadoExportVideo('Preparando exportacion...', 0);
+  try {
+    const r = await window.clipForge.exportIniciar(archivoActual, {});
+    if (r && r.ok) {
+      fijarEstadoExportVideo(`Listo: ${r.path}`, 100);
+    } else if (r && r.cancelado) {
+      fijarEstadoExportVideo('Exportacion cancelada.');
+    } else {
+      fijarEstadoExportVideo(`Error: ${r ? r.error : 'desconocido'}`);
+    }
+  } finally {
+    btnExportVideo.disabled = false;
+    btnCancelarExportVideo.style.display = 'none';
+  }
+});
+
+btnCancelarExportVideo.addEventListener('click', async () => {
+  await window.clipForge.exportCancelar();
+});
+
 // --- Seccion de API Keys ---
 const inputNombreKey = document.getElementById('inputNombreKey');
 const inputValorKey = document.getElementById('inputValorKey');
