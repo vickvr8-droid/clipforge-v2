@@ -1,11 +1,21 @@
 // Almacenamiento local de API keys + deteccion automatica de proveedor
 // por prefijo/formato (item 3 del alcance MVP, CTX_PROYECTO_CLIPFORGE_1D.md).
-// Se guardan en texto plano en userData (mismo criterio que el user ya
-// acepta para sus otras keys, ver CTX_MAESTRO seccion 6 - no es peor
-// que lo que ya tiene en claude_desktop_config.json).
+//
+// CIFRADO 04/08/2026: antes las keys se guardaban en TEXTO PLANO en
+// userData/keys.json. Cualquier programa corriendo con el usuario (o
+// cualquiera que abriera esa carpeta) las leia enteras. Ahora se cifran
+// con safeStorage de Electron, que usa el llavero del sistema operativo
+// (DPAPI en Windows, Keychain en macOS, libsecret en Linux): el archivo
+// solo se puede descifrar desde la misma cuenta de usuario de esta
+// maquina.
+//
+// Compatibilidad: las keys ya guardadas en plano se siguen leyendo (campo
+// "valor") y se re-guardan cifradas la primera vez que se toca la lista,
+// asi no hay que pedirle al user que las vuelva a pegar.
 
 const fs = require('fs');
 const path = require('path');
+const { safeStorage } = require('electron');
 
 function getKeysPath(app) {
   return path.join(app.getPath('userData'), 'keys.json');
@@ -24,6 +34,38 @@ function detectarProveedor(valor) {
   return 'Desconocido (revisar manual)';
 }
 
+function cifradoDisponible() {
+  try {
+    return safeStorage && safeStorage.isEncryptionAvailable();
+  } catch (e) {
+    return false; // safeStorage no esta listo (antes de app.whenReady) o el SO no lo soporta
+  }
+}
+
+// Cifra a base64. Si el SO no ofrece cifrado, cae a texto plano igual que
+// antes en vez de dejar al user sin poder guardar nada.
+function cifrar(valor) {
+  if (!cifradoDisponible()) return { valor };
+  try {
+    return { valorCifrado: safeStorage.encryptString(valor).toString('base64') };
+  } catch (e) {
+    return { valor };
+  }
+}
+
+function descifrar(k) {
+  if (k.valorCifrado) {
+    try {
+      return safeStorage.decryptString(Buffer.from(k.valorCifrado, 'base64'));
+    } catch (e) {
+      // Perfil de usuario/maquina distinto al que cifro: la key es
+      // irrecuperable, hay que volver a pegarla.
+      return null;
+    }
+  }
+  return k.valor || null;
+}
+
 function leerKeys(app) {
   const p = getKeysPath(app);
   if (!fs.existsSync(p)) return [];
@@ -34,19 +76,43 @@ function leerKeys(app) {
   }
 }
 
-function guardarKey(app, { nombre, valor }) {
+function escribirKeys(app, keys) {
+  const p = getKeysPath(app);
+  fs.mkdirSync(path.dirname(p), { recursive: true });
+  fs.writeFileSync(p, JSON.stringify(keys, null, 2), 'utf-8');
+}
+
+// Migra al vuelo las keys que quedaron en texto plano de versiones
+// anteriores. Se llama al listar, que es lo primero que hace la UI.
+function migrarACifrado(app) {
+  if (!cifradoDisponible()) return leerKeys(app);
   const keys = leerKeys(app);
+  let cambio = false;
+  const migradas = keys.map((k) => {
+    if (!k.valorCifrado && k.valor) {
+      cambio = true;
+      const { valor, ...resto } = k;
+      return { ...resto, ...cifrar(valor) };
+    }
+    return k;
+  });
+  if (cambio) escribirKeys(app, migradas);
+  return migradas;
+}
+
+function guardarKey(app, { nombre, valor }) {
+  const keys = migrarACifrado(app);
   const proveedor = detectarProveedor(valor);
   const nueva = {
     id: Date.now().toString(36),
     nombre: nombre || proveedor,
     proveedor,
-    valor,
+    ...cifrar(valor),
     ultimos4: valor.slice(-4),
     creada: new Date().toISOString()
   };
   keys.push(nueva);
-  fs.writeFileSync(getKeysPath(app), JSON.stringify(keys, null, 2), 'utf-8');
+  escribirKeys(app, keys);
   // Nunca devolver el valor completo de vuelta al renderer (regla 22 CTX_MAESTRO,
   // no repetir keys en texto/UI innecesariamente mas de lo justo).
   return { id: nueva.id, nombre: nueva.nombre, proveedor: nueva.proveedor, ultimos4: nueva.ultimos4, creada: nueva.creada };

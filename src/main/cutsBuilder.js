@@ -5,6 +5,8 @@
 // rechazar (renderer) trabaja puramente sobre este array; exportar
 // solo relee su estado final, no vuelve a tocar ffmpeg/whisper.
 
+const { fusionar: fusionarIntervalos, duracion: duracionIntervalos } = require('./intervalos');
+
 function buildBlocks(segments, silences) {
   const blocks = [];
   let idCounter = 1;
@@ -37,11 +39,21 @@ function buildBlocks(segments, silences) {
   return blocks;
 }
 
+// CORREGIDO 04/08/2026: antes esto SUMABA la duracion de cada bloque
+// cortado por separado. Como los bloques de silencio se solapan con los
+// de habla (buildBlocks los agrega como dos analisis independientes del
+// mismo audio, no como una particion), el solape se contaba dos veces:
+// el "% eliminado" salia inflado y en videos con muchos silencios cortos
+// llegaba a pasar el 100%, con "metraje resultante" negativo o en 0.
+// Ahora se fusionan los intervalos cortados y se restan del total, que es
+// la misma cuenta que usa el plan de exportacion (intervalos.js) - asi el
+// numero que muestra la interfaz coincide con lo que realmente sale.
 function summarize(blocks) {
   const totalDuration = blocks.reduce((acc, b) => Math.max(acc, b.end || 0), 0);
-  const cutDuration = blocks
+  const cortados = blocks
     .filter((b) => b.status === 'cut')
-    .reduce((acc, b) => acc + Math.max(0, (b.end || 0) - (b.start || 0)), 0);
+    .map((b) => [Math.max(0, b.start || 0), Math.max(0, b.end || 0)]);
+  const cutDuration = duracionIntervalos(fusionarIntervalos(cortados));
   const keptDuration = Math.max(0, totalDuration - cutDuration);
   const cutCount = blocks.filter((b) => b.status === 'cut').length;
   return {
