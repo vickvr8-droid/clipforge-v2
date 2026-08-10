@@ -1,0 +1,38 @@
+name: Limpia Auricular APK
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "android-earpiece-cleaner/**"
+      - ".github/workflows/android-earpiece-cleaner.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android-earpiece-cleaner
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Build release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LimpiaAuricular-apk
+          path: android-earpiece-cleaner/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error

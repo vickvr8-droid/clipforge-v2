@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Limpia Auricular</string>
+    <string name="subtitle">Expulsa agua y polvo del altavoz de llamadas con vibraciones de sonido grave.</string>
+
+    <string name="warning">Apunta el altavoz hacia abajo y NO te pongas el celular en la oreja mientras suena. Quita los audífonos antes de empezar.</string>
+
+    <string name="label_route">Altavoz a limpiar</string>
+    <string name="route_earpiece">Auricular</string>
+    <string name="route_speaker">Altavoz</string>
+
+    <string name="label_program">Programa</string>
+    <string name="program_row">%1$s · %2$s\n%3$s</string>
+
+    <string name="label_volume">Volumen</string>
+    <string name="volume_value">%1$d%%</string>
+
+    <string name="start">Empezar limpieza</string>
+    <string name="stop">Detener</string>
+
+    <string name="idle_status">Listo: %1$s (%2$s)</string>
+    <string name="running_status">Limpiando %1$s… faltan %2$s</string>
+
+    <string name="finished">Limpieza terminada. Sacude el celular con el altavoz hacia abajo y repite si hace falta.</string>
+    <string name="stopped">Limpieza detenida.</string>
+    <string name="call_in_progress">Hay una llamada en curso. Termínala antes de limpiar.</string>
+
+    <string name="seconds_short">%1$d s</string>
+    <string name="minutes_short">%1$d min</string>
+    <string name="minutes_seconds_short">%1$d min %2$d s</string>
+
+    <string name="ok">Entendido</string>
+    <string name="help_title">Cómo usarla</string>
+    <string name="help_body">1. Quita la funda y los audífonos (con audífonos conectados el sonido se va por ahí).\n\n2. Elige «Auricular»: es el altavoz de arriba, el que usas en las llamadas sin altavoz.\n\n3. Pon el celular en vertical con la pantalla hacia ti y ligeramente inclinado hacia abajo, para que el agua salga por gravedad.\n\n4. Toca «Empezar limpieza» y deja el celular quieto sin taparlo con la mano.\n\n5. Al terminar, seca la rejilla con un paño suave y repite el programa si el sonido todavía se oye apagado.\n\nSi el celular se mojó de verdad, deja que se seque varias horas antes de cargarlo. Esta app mueve el agua con sonido, no reemplaza el secado.\n\nNota: la app pone el sistema en modo llamada mientras suena, por eso el audio sale por el auricular. Al detenerla todo vuelve a la normalidad.</string>
+</resources>
