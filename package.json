@@ -1,5 +1,5 @@
 {
-  "name": "clipforge",
+  "name": "clipforge3-test",
   "version": "0.2.0",
   "private": true,
   "description": "Editor de escritorio para armar shorts 9:16 a partir de recuadros sobre un visor 16:9, con transcripcion local (WhisperX / faster-whisper), deteccion de silencios (ffmpeg) y analisis de muletillas via OpenRouter.",
@@ -19,10 +19,14 @@
     "files": [
       "src/**/*",
       "python-backend/**/*",
-      "package.json"
+      "package.json",
+      "node_modules/**/*"
     ],
     "win": {
       "target": "nsis"
     }
+  },
+  "dependencies": {
+    "mediabunny": "^1.52.3"
   }
 }

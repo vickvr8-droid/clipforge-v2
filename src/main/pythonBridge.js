@@ -39,7 +39,12 @@ function vigilarProgreso(progressPath, onProgress) {
   }, INTERVALO_PROGRESO_MS);
 }
 
-function transcribir({ etiqueta, pythonPath, envVar, script, inputPath, outJsonPath, onProgress }) {
+// `envExtra` deja que cada motor agregue lo suyo al entorno del proceso
+// hijo (hoy: el token de HuggingFace para la diarizacion). Va por ENTORNO
+// y NO por argumentos: los argumentos de un proceso los puede leer
+// cualquier otro proceso de la maquina, y un token no tiene por que estar
+// a la vista en el administrador de tareas.
+function transcribir({ etiqueta, pythonPath, envVar, script, inputPath, outJsonPath, onProgress, envExtra }) {
   return new Promise((resolve, reject) => {
     if (!binarioDisponible(pythonPath, ['--version'])) {
       reject(errorBinarioFaltante(`el interprete de Python de ${etiqueta}`, pythonPath, envVar));
@@ -50,8 +55,30 @@ function transcribir({ etiqueta, pythonPath, envVar, script, inputPath, outJsonP
     // PYTHONIOENCODING/UTF8: sin esto, un video con acentos o emojis en
     // el nombre puede hacer estallar el print() del script en Windows
     // (cp1252) y matar la transcripcion ya terminada al escribir el log.
+    // NLTK_DATA fijo a D:\nltk-data (04/08/2026): cuando esta app se
+    // lanza como descendiente de Claude Desktop (app empaquetada tipo
+    // Store/MSIX), Windows virtualiza las rutas bajo AppData para todo
+    // ese arbol de procesos - nltk (usado por WhisperX para el
+    // tokenizer punkt) detecta esa redireccion y la bloquea con
+    // "PermissionError: Security Violation [pathsec.open]: Unauthorized
+    // path". Fijar NLTK_DATA a una ruta en D:\ (no-AppData, coherente
+    // con la regla de "todo lo pesado a D:") evita depender de quien
+    // lanza la app o de la virtualizacion de Windows.
+    //
+    // HF_HOME / TORCH_HOME, misma idea (08/08/2026). Sin definirlos,
+    // HuggingFace y torch descargan a C:\Users\<user>\.cache\, y ahi se
+    // habian juntado 9,4 GB de modelos con C: al 94%. Cada motor nuevo
+    // (el de alineacion, el de diarizacion) sumaba mas sin avisar.
+    // Se respeta lo que ya venga del entorno: si el user los definio a
+    // mano, manda su valor - esto es un piso, no una imposicion.
     const proc = spawn(pythonPath, [script, inputPath, outJsonPath], {
-      env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
+      env: {
+        HF_HOME: 'D:\\hf-cache',
+        TORCH_HOME: 'D:\\torch-cache',
+        ...process.env,
+        PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1', NLTK_DATA: 'D:\\nltk-data',
+        ...(envExtra || {})
+      }
     });
 
     const timer = vigilarProgreso(progressPath, onProgress);

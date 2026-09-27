@@ -1,0 +1,267 @@
+{
+  "package.json": {
+    "mtime": 1786197040.1415534,
+    "ast_hash": "aec520fb666693801d6f26d54cdd6b92",
+    "semantic_hash": "aec520fb666693801d6f26d54cdd6b92"
+  },
+  "python-backend/detect_silences.py": {
+    "mtime": 1785897705.6873527,
+    "ast_hash": "fc1b3f9d1eaf78553cf5decc4f5abf99",
+    "semantic_hash": "fc1b3f9d1eaf78553cf5decc4f5abf99"
+  },
+  "python-backend/transcribe_fasterwhisper.py": {
+    "mtime": 1785897705.6879957,
+    "ast_hash": "c932cf4a553063d351962124dbe32fac",
+    "semantic_hash": "c932cf4a553063d351962124dbe32fac"
+  },
+  "python-backend/transcribe_whisperx.py": {
+    "mtime": 1786198664.6719847,
+    "ast_hash": "260303f8e075d9341dfadc365f9be4d6",
+    "semantic_hash": "260303f8e075d9341dfadc365f9be4d6"
+  },
+  "src/main/cutsBuilder.js": {
+    "mtime": 1785979314.7042825,
+    "ast_hash": "4d342f7b1c7a402cfff124fd38a12eda",
+    "semantic_hash": "4d342f7b1c7a402cfff124fd38a12eda"
+  },
+  "src/main/exportRunner.js": {
+    "mtime": 1786167371.8415644,
+    "ast_hash": "bd3a29b335b8062e9b46e87977a9c298",
+    "semantic_hash": "bd3a29b335b8062e9b46e87977a9c298"
+  },
+  "src/main/fasterWhisperBridge.js": {
+    "mtime": 1785897705.6900108,
+    "ast_hash": "d0acd829e16ae7e97fbdb62621c2a578",
+    "semantic_hash": "d0acd829e16ae7e97fbdb62621c2a578"
+  },
+  "src/main/intervalos.js": {
+    "mtime": 1785897705.6910102,
+    "ast_hash": "b0051eef8cd6aa66973324def46216b8",
+    "semantic_hash": "b0051eef8cd6aa66973324def46216b8"
+  },
+  "src/main/keysStore.js": {
+    "mtime": 1785897705.6910102,
+    "ast_hash": "7719ad28f50f89b289d405a42e200679",
+    "semantic_hash": "7719ad28f50f89b289d405a42e200679"
+  },
+  "src/main/llmAnalyzer.js": {
+    "mtime": 1785897705.6920114,
+    "ast_hash": "a502fa88b84e8a4f9741bc692bf459e5",
+    "semantic_hash": "a502fa88b84e8a4f9741bc692bf459e5"
+  },
+  "src/main/main.js": {
+    "mtime": 1786230774.543159,
+    "ast_hash": "ca0f7a7f4e68906893990473a03e3843",
+    "semantic_hash": "ca0f7a7f4e68906893990473a03e3843"
+  },
+  "src/main/mediaProbe.js": {
+    "mtime": 1785897705.69301,
+    "ast_hash": "fb6e597355d41cf9a57caa238a262bcc",
+    "semantic_hash": "fb6e597355d41cf9a57caa238a262bcc"
+  },
+  "src/main/preload.js": {
+    "mtime": 1786231152.946946,
+    "ast_hash": "e0cee74cebb4a825161f68bf2a02e8ef",
+    "semantic_hash": "e0cee74cebb4a825161f68bf2a02e8ef"
+  },
+  "src/main/pythonBridge.js": {
+    "mtime": 1786199108.9847786,
+    "ast_hash": "6b7e411253315d4bcc3b8f643bca84c8",
+    "semantic_hash": "6b7e411253315d4bcc3b8f643bca84c8"
+  },
+  "src/main/settingsStore.js": {
+    "mtime": 1786214172.3237746,
+    "ast_hash": "52113cf3b88fb1439cfdfaf4098efb44",
+    "semantic_hash": "52113cf3b88fb1439cfdfaf4098efb44"
+  },
+  "src/main/silenceBridge.js": {
+    "mtime": 1785897705.6940105,
+    "ast_hash": "78ca01507ccac5bba9ba9ef9e3e58adb",
+    "semantic_hash": "78ca01507ccac5bba9ba9ef9e3e58adb"
+  },
+  "src/main/whisperxBridge.js": {
+    "mtime": 1786198672.64001,
+    "ast_hash": "06fe3eeff2162b8719f9babf7f989087",
+    "semantic_hash": "06fe3eeff2162b8719f9babf7f989087"
+  },
+  "src/renderer/renderer.js": {
+    "mtime": 1786214288.6402483,
+    "ast_hash": "7fb1e2854614fedf3f7e5836865b017a",
+    "semantic_hash": "7fb1e2854614fedf3f7e5836865b017a"
+  },
+  "src/shared/montaje.js": {
+    "mtime": 1786231972.9606419,
+    "ast_hash": "6391153585af399be32cae3ca480098f",
+    "semantic_hash": "6391153585af399be32cae3ca480098f"
+  },
+  "test/cortesManuales.test.js": {
+    "mtime": 1785979435.7946362,
+    "ast_hash": "e9d46a206019258b4af669559ed9d4ec",
+    "semantic_hash": "e9d46a206019258b4af669559ed9d4ec"
+  },
+  "test/montaje.test.js": {
+    "mtime": 1786025716.8231719,
+    "ast_hash": "d88277d5b7a5dd283ace15f9a675138b",
+    "semantic_hash": "d88277d5b7a5dd283ace15f9a675138b"
+  },
+  "CTX_PROYECTO_CLIPFORGE_1D.md": {
+    "mtime": 1785897705.684352,
+    "ast_hash": "53f8f06ee1634dc57a950bf96cbf4354",
+    "semantic_hash": "53f8f06ee1634dc57a950bf96cbf4354"
+  },
+  "README.md": {
+    "mtime": 1785897705.6853523,
+    "ast_hash": "0b51d81a54d4a79a7d82ee76a5f28a1c",
+    "semantic_hash": "0b51d81a54d4a79a7d82ee76a5f28a1c"
+  },
+  "src/renderer/index.html": {
+    "mtime": 1786231226.4294388,
+    "ast_hash": "f1fae348ea217270e8169479429619fb",
+    "semantic_hash": "f1fae348ea217270e8169479429619fb"
+  },
+  "src/shared/geometria916.js": {
+    "mtime": 1786067932.0168695,
+    "ast_hash": "8370c159da20e088b77718a95709b9b8",
+    "semantic_hash": "8370c159da20e088b77718a95709b9b8"
+  },
+  "src/shared/layout916.js": {
+    "mtime": 1786125458.4861853,
+    "ast_hash": "c94e8321ca5c8b9ab100e46ca56c1938",
+    "semantic_hash": "c94e8321ca5c8b9ab100e46ca56c1938"
+  },
+  "src/shared/lienzo.js": {
+    "mtime": 1786136839.9090886,
+    "ast_hash": "98c90fa0fd73e289b26552faf1938cbf",
+    "semantic_hash": "98c90fa0fd73e289b26552faf1938cbf"
+  },
+  "src/shared/recuadros.js": {
+    "mtime": 1786194624.4544694,
+    "ast_hash": "a1d2242f26051818c26c38138c014f3d",
+    "semantic_hash": "a1d2242f26051818c26c38138c014f3d"
+  },
+  "test/audioVinculado.test.js": {
+    "mtime": 1786128150.0738816,
+    "ast_hash": "825d53304864b02f4e95fc5bcaac5a7c",
+    "semantic_hash": "825d53304864b02f4e95fc5bcaac5a7c"
+  },
+  "test/geometria916.test.js": {
+    "mtime": 1786067952.8148751,
+    "ast_hash": "ae64c935a59872fdfea130aa6388aa67",
+    "semantic_hash": "ae64c935a59872fdfea130aa6388aa67"
+  },
+  "test/layout916.test.js": {
+    "mtime": 1786125495.7511554,
+    "ast_hash": "9af583a4056f03f2008f273987693e03",
+    "semantic_hash": "9af583a4056f03f2008f273987693e03"
+  },
+  "test/lienzo.test.js": {
+    "mtime": 1786136883.6975334,
+    "ast_hash": "da607f9ba5d49ef1dbe9bafc9fe1fc73",
+    "semantic_hash": "da607f9ba5d49ef1dbe9bafc9fe1fc73"
+  },
+  "test/moverClip.test.js": {
+    "mtime": 1786066121.3372772,
+    "ast_hash": "74b57b7dbc93fdb1c480cda736cd140c",
+    "semantic_hash": "74b57b7dbc93fdb1c480cda736cd140c"
+  },
+  "test/ponerMaterial.test.js": {
+    "mtime": 1786066800.5590973,
+    "ast_hash": "8f9c9fb1e1d32ae4cf5a0c1d60c2f395",
+    "semantic_hash": "8f9c9fb1e1d32ae4cf5a0c1d60c2f395"
+  },
+  "test/recorteNormal.test.js": {
+    "mtime": 1786127790.250503,
+    "ast_hash": "59d5c454456dc401fd9173b12c26e0a8",
+    "semantic_hash": "59d5c454456dc401fd9173b12c26e0a8"
+  },
+  "test/recuadros.test.js": {
+    "mtime": 1786194629.4023738,
+    "ast_hash": "c1cc7f98405a18d32ba1533c42d363b5",
+    "semantic_hash": "c1cc7f98405a18d32ba1533c42d363b5"
+  },
+  "test/transcripcionTexto.test.js": {
+    "mtime": 1786027858.2015643,
+    "ast_hash": "ffb96abf8ad54792715cb00e688f9c97",
+    "semantic_hash": "ffb96abf8ad54792715cb00e688f9c97"
+  },
+  "test/visorEjes.test.js": {
+    "mtime": 1786056762.30586,
+    "ast_hash": "13bdb0f61690381558df9efe04720a18",
+    "semantic_hash": "13bdb0f61690381558df9efe04720a18"
+  },
+  "install_debug.txt": {
+    "mtime": 1785897788.5350664,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "install_debug2.txt": {
+    "mtime": 1785897837.7576568,
+    "ast_hash": "d005a1b697621bbaa3605e841dc0364b",
+    "semantic_hash": "d005a1b697621bbaa3605e841dc0364b"
+  },
+  "bajar-pyannote.ps1": {
+    "mtime": 1786200014.0079327,
+    "ast_hash": "8cfacc72b0b8bfefe87a3ff82cb04a99",
+    "semantic_hash": "8cfacc72b0b8bfefe87a3ff82cb04a99"
+  },
+  "python-backend/transcribe_nvidia.py": {
+    "mtime": 1786214403.310859,
+    "ast_hash": "708acbef20dafe031205411918d554cb",
+    "semantic_hash": "708acbef20dafe031205411918d554cb"
+  },
+  "src/main/nubeBridge.js": {
+    "mtime": 1786214185.4981494,
+    "ast_hash": "27d444260f2a0c3a36b3d73baf30bcc7",
+    "semantic_hash": "27d444260f2a0c3a36b3d73baf30bcc7"
+  },
+  "src/main/protocoloMedia.js": {
+    "mtime": 1786231148.3959124,
+    "ast_hash": "0df5818beded92d643ec7787089dc171",
+    "semantic_hash": "0df5818beded92d643ec7787089dc171"
+  },
+  "src/renderer/cuadros.js": {
+    "mtime": 1786230879.642879,
+    "ast_hash": "66f2f2fc18e4a068b9ac60f319c98f18",
+    "semantic_hash": "66f2f2fc18e4a068b9ac60f319c98f18"
+  },
+  "src/shared/composicion.js": {
+    "mtime": 1786195290.731749,
+    "ast_hash": "02afc415f43723b8886826a06b59f6e4",
+    "semantic_hash": "02afc415f43723b8886826a06b59f6e4"
+  },
+  "src/shared/guionExport.js": {
+    "mtime": 1786230921.8995852,
+    "ast_hash": "bb4594f34ae4a915198ad00b48d8b952",
+    "semantic_hash": "bb4594f34ae4a915198ad00b48d8b952"
+  },
+  "test/composicion.test.js": {
+    "mtime": 1786195391.8158877,
+    "ast_hash": "7b4f03b2b4e36ed23691484fb3dd8168",
+    "semantic_hash": "7b4f03b2b4e36ed23691484fb3dd8168"
+  },
+  "test/encuadreAjuste.test.js": {
+    "mtime": 1786194901.324739,
+    "ast_hash": "b4db004e57b0630e36af5cfd403d4a43",
+    "semantic_hash": "b4db004e57b0630e36af5cfd403d4a43"
+  },
+  "test/guionExport.test.js": {
+    "mtime": 1786231004.4778712,
+    "ast_hash": "029c58b7ba6eb8f9de64c03c7cf8bbc0",
+    "semantic_hash": "029c58b7ba6eb8f9de64c03c7cf8bbc0"
+  },
+  "test/pistasUniversales.test.js": {
+    "mtime": 1786146770.5586822,
+    "ast_hash": "8b74311378056ecaae83100a5c4ef2b4",
+    "semantic_hash": "8b74311378056ecaae83100a5c4ef2b4"
+  },
+  "test/vinculoAV.test.js": {
+    "mtime": 1786231985.59164,
+    "ast_hash": "32ed8ccbf9b039d0b5b01a06cbf2ed44",
+    "semantic_hash": "32ed8ccbf9b039d0b5b01a06cbf2ed44"
+  },
+  "PENDIENTE.md": {
+    "mtime": 1786232003.661079,
+    "ast_hash": "bd57687ba3da1dafe05f83fc34c72161",
+    "semantic_hash": "bd57687ba3da1dafe05f83fc34c72161"
+  }
+}

@@ -35,6 +35,24 @@ const DEFAULTS = {
   ffprobe: 'ffprobe',
   pythonWhisperX: 'C:\\Users\\vicente\\remotion-projects\\whisperx-tool\\.venv\\Scripts\\python.exe',
   pythonFasterWhisper: 'C:\\Users\\vicente\\audio-ai-tools\\venv\\Scripts\\python.exe',
+  // Motor de nube (NVIDIA Riva). Comparte por defecto el venv de WhisperX,
+  // que es donde esta instalado nvidia-riva-client. Se deja como ruta
+  // aparte para poder apuntarlo a un venv chico (solo grpc, sin torch) sin
+  // tocar el motor local.
+  pythonNube: 'C:\\Users\\vicente\\remotion-projects\\whisperx-tool\\.venv\\Scripts\\python.exe',
+  // Config del motor de nube. Vacio = usar el default del script.
+  nube: {
+    servidor: '',        // vacio -> grpc.nvcf.nvidia.com:443
+    functionId: '',      // el id que muestra build.nvidia.com junto al ejemplo
+    modelo: '',          // vacio -> el que sirva el endpoint
+    idioma: 'es-US',
+    // Palabras que el decodificador debe favorecer: modismos, nombres
+    // propios, marcas. Es la unica forma de sesgar el reconocimiento
+    // contra la API (un modelo N-gram propio solo se puede acoplar
+    // corriendo el modelo local en NeMo, no por la nube).
+    palabrasClave: '',
+    boost: 4
+  },
   // Preferencias de exportacion recordadas entre sesiones.
   exportacion: {
     ancho: 1080,
@@ -53,7 +71,8 @@ const ENV_MAP = {
   ffmpeg: 'CLIPFORGE_FFMPEG',
   ffprobe: 'CLIPFORGE_FFPROBE',
   pythonWhisperX: 'CLIPFORGE_PYTHON_WHISPERX',
-  pythonFasterWhisper: 'CLIPFORGE_PYTHON_FASTERWHISPER'
+  pythonFasterWhisper: 'CLIPFORGE_PYTHON_FASTERWHISPER',
+  pythonNube: 'CLIPFORGE_PYTHON_NUBE'
 };
 
 // El modulo se usa desde bridges que no reciben "app" (whisperxBridge,
@@ -81,7 +100,8 @@ function leer() {
   cache = {
     ...DEFAULTS,
     ...guardado,
-    exportacion: { ...DEFAULTS.exportacion, ...(guardado.exportacion || {}) }
+    exportacion: { ...DEFAULTS.exportacion, ...(guardado.exportacion || {}) },
+    nube: { ...DEFAULTS.nube, ...(guardado.nube || {}) }
   };
   return cache;
 }
@@ -91,7 +111,8 @@ function guardar(cambios) {
   const nuevo = {
     ...actual,
     ...cambios,
-    exportacion: { ...actual.exportacion, ...(cambios.exportacion || {}) }
+    exportacion: { ...actual.exportacion, ...(cambios.exportacion || {}) },
+    nube: { ...actual.nube, ...(cambios.nube || {}) }
   };
   cache = nuevo;
   if (rutaConfig) {
@@ -118,6 +139,7 @@ const ffmpegPath = () => rutaDe('ffmpeg');
 const ffprobePath = () => rutaDe('ffprobe');
 const pythonWhisperXPath = () => rutaDe('pythonWhisperX');
 const pythonFasterWhisperPath = () => rutaDe('pythonFasterWhisper');
+const pythonNubePath = () => rutaDe('pythonNube');
 
 // Un binario es "usable" si es una ruta absoluta que existe en disco, o
 // un nombre suelto que el sistema puede ejecutar (se prueba de verdad
@@ -171,6 +193,7 @@ module.exports = {
   ffprobePath,
   pythonWhisperXPath,
   pythonFasterWhisperPath,
+  pythonNubePath,
   binarioDisponible,
   verificarBinarios,
   errorBinarioFaltante

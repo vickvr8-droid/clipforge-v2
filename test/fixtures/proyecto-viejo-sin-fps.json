@@ -1,0 +1,241 @@
+{
+  "_nota": "Copia del montaje y layout916 de proyectos/TEST_1_4b0a63d8/proyecto.json tal como estaba el 13/09/2026, ANTES de guardar fps en el material. No editar: es la prueba de que un proyecto viejo abre con su edicion intacta.",
+  "inputPath": "E:\\videos listos\\TEST 1.mov",
+  "montaje": {
+    "version": 1,
+    "media": [
+      {
+        "id": "mmsi46w1n0",
+        "ruta": "E:\\videos listos\\TEST 1.mov",
+        "nombre": "TEST 1.mov",
+        "tipo": "video",
+        "disponibleIn": 0,
+        "disponibleOut": 824,
+        "ancho": 1920,
+        "alto": 1080
+      }
+    ],
+    "pistas": [
+      {
+        "id": "pmsi46w1n3",
+        "tipo": "audio",
+        "nombre": "A1",
+        "visible": true,
+        "elementos": [
+          {
+            "tipo": "clip",
+            "id": "cmsjjtamh1f",
+            "mediaId": "mmsi46w1n0",
+            "usadoIn": 0,
+            "usadoOut": 190.36684881668788,
+            "vinculo": "kmsjjtamh1d"
+          },
+          {
+            "tipo": "hueco",
+            "id": "hmskqy1gr1j",
+            "duracion": 2.1462835674958
+          },
+          {
+            "tipo": "clip",
+            "id": "cmskqx0kix",
+            "mediaId": "mmsi46w1n0",
+            "usadoIn": 190.36684881668788,
+            "usadoOut": 323.2080139673976,
+            "vinculo": "kmskqx0kiw"
+          },
+          {
+            "tipo": "clip",
+            "id": "cmskqx84z19",
+            "mediaId": "mmsi46w1n0",
+            "usadoIn": 323.2080139673976,
+            "usadoOut": 436.15852337361605,
+            "vinculo": "kmskqx84z18"
+          },
+          {
+            "tipo": "clip",
+            "id": "cmskqx4ii13",
+            "mediaId": "mmsi46w1n0",
+            "usadoIn": 436.15852337361605,
+            "usadoOut": 523.2421935902203,
+            "vinculo": "kmskqx4ii12"
+          },
+          {
+            "tipo": "clip",
+            "id": "cmslfmue418",
+            "mediaId": "mmsi46w1n0",
+            "usadoIn": 523.2421935902203,
+            "usadoOut": 624.3421844628406,
+            "vinculo": "kmslfmue317"
+          },
+          {
+            "tipo": "clip",
+            "id": "cmslfmvsp1e",
+            "mediaId": "mmsi46w1n0",
+            "usadoIn": 624.3421844628406,
+            "usadoOut": 824,
+            "vinculo": "kmslfmvsp1d"
+          }
+        ]
+      },
+      {
+        "id": "pmsi46w1n1",
+        "tipo": "video",
+        "nombre": "V1",
+        "visible": true,
+        "elementos": [
+          {
+            "tipo": "clip",
+            "id": "cmsjjtamh1e",
+            "mediaId": "mmsi46w1n0",
+            "usadoIn": 0,
+            "usadoOut": 190.36684881668788,
+            "vinculo": "kmsjjtamh1d",
+            "transformacion": {
+              "escala": 1,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "tipo": "hueco",
+            "id": "hmskqy1gr1l",
+            "duracion": 2.1462835674958
+          },
+          {
+            "tipo": "clip",
+            "id": "cmskqx0kiy",
+            "mediaId": "mmsi46w1n0",
+            "usadoIn": 190.36684881668788,
+            "usadoOut": 323.2080139673976,
+            "vinculo": "kmskqx0kiw",
+            "transformacion": {
+              "escala": 1,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "tipo": "clip",
+            "id": "cmskqx84z1a",
+            "mediaId": "mmsi46w1n0",
+            "usadoIn": 323.2080139673976,
+            "usadoOut": 436.15852337361605,
+            "vinculo": "kmskqx84z18",
+            "transformacion": {
+              "escala": 1,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "tipo": "clip",
+            "id": "cmskqx4ii14",
+            "mediaId": "mmsi46w1n0",
+            "usadoIn": 436.15852337361605,
+            "usadoOut": 523.2421935902203,
+            "vinculo": "kmskqx4ii12",
+            "transformacion": {
+              "escala": 1,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "tipo": "clip",
+            "id": "cmslfmue419",
+            "mediaId": "mmsi46w1n0",
+            "usadoIn": 523.2421935902203,
+            "usadoOut": 624.3421844628406,
+            "vinculo": "kmslfmue317",
+            "transformacion": {
+              "escala": 1,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "tipo": "clip",
+            "id": "cmslfmvsq1f",
+            "mediaId": "mmsi46w1n0",
+            "usadoIn": 624.3421844628406,
+            "usadoOut": 824,
+            "vinculo": "kmslfmvsp1d",
+            "transformacion": {
+              "escala": 1,
+              "x": 0,
+              "y": 0
+            }
+          }
+        ]
+      },
+      {
+        "id": "pmt20t0mc1",
+        "tipo": "video",
+        "nombre": "V4",
+        "visible": true,
+        "elementos": [
+          {
+            "tipo": "clip",
+            "id": "emt20t0mc0",
+            "mediaId": null,
+            "usadoIn": 0,
+            "usadoOut": 916.6726555542189,
+            "ajuste": {
+              "rect": {
+                "xPct": 0.21001862451730918,
+                "yPct": 0,
+                "wPct": 0.5916568051303406,
+                "hPct": 1
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": "pmt20teaj3",
+        "tipo": "video",
+        "nombre": "V5",
+        "visible": true,
+        "elementos": [
+          {
+            "tipo": "hueco",
+            "id": "hmt20toih4",
+            "duracion": 185.73079089775732
+          },
+          {
+            "tipo": "clip",
+            "id": "emt20teaj2",
+            "mediaId": null,
+            "usadoIn": 185.73079089775732,
+            "usadoOut": 463.4903520601692,
+            "ajuste": {
+              "rect": {
+                "xPct": 0.2763054713322538,
+                "yPct": 0.892857142857143,
+                "wPct": 0.33954244517092447,
+                "hPct": 0.07812499999999989
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "layout916": {
+    "version": 2,
+    "celdas": {
+      "emt20t0mc0": {
+        "x": 0,
+        "y": 0,
+        "w": 1,
+        "h": 1
+      },
+      "emt20teaj2": {
+        "x": 0,
+        "y": 0.40348554,
+        "w": 1,
+        "h": 0.274292238
+      }
+    }
+  }
+}

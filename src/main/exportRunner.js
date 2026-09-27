@@ -26,7 +26,39 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const { ffmpegPath, binarioDisponible, errorBinarioFaltante } = require('./settingsStore');
-const { argsSegmento, argsConcat, srtDeSalida } = require('./exportPlan');
+
+// ROTO A PROPOSITO, VISIBLE A PROPOSITO (07/08/2026).
+//
+// Este archivo pedia `require('./exportPlan')`, y exportPlan.js se borro
+// el 06/08 junto con el resto del sistema viejo. Hoy nadie carga este
+// modulo (main.js no lo requiere), asi que el import roto NUNCA se
+// ejecuta y la app arranca igual — pero era una mina enterrada: el
+// primero que conectara la exportacion se comia un MODULE_NOT_FOUND sin
+// ninguna pista de por que.
+//
+// Se deja el archivo (el motor de ffmpeg en si sirve y esta probado en
+// produccion) pero la dependencia se declara explicita y falla con un
+// mensaje que dice QUE hacer, en vez de con un stack de Node.
+//
+// OJO al escribir el planificador nuevo: este runner NO es "solo un
+// runner". Necesita tres funciones que ARMAN argumentos
+// (`argsSegmento`, `argsConcat`, `srtDeSalida`), asi que el planificador
+// nuevo tiene que proveerlas o el runner tiene que recibirlas por
+// parametro. La nota del MD que dice que exportRunner.js "quedo intacto
+// y sirve para lo que se construya encima" es optimista: sirve el
+// spawn/progreso/concat/cancelacion, no el armado de comandos.
+function planificador() {
+  try {
+    return require('./exportPlan');
+  } catch (e) {
+    throw new Error(
+      'La exportacion de video esta desconectada: falta src/main/exportPlan.js ' +
+      '(se borro el 06/08/2026 con el sistema viejo). Hay que escribir el ' +
+      'planificador nuevo, que debe leer del montaje (Montaje.composicionEn) ' +
+      'y exportar argsSegmento/argsConcat/srtDeSalida.'
+    );
+  }
+}
 
 const PESO_RENDER = 0.9; // el 90% del progreso es renderizar segmentos, el 10% final es el concat
 
@@ -133,6 +165,11 @@ function cancelar() {
 // onProgress({ fase, segmentoActual, totalSegmentos, porcentaje, mensaje })
 async function ejecutar({ plan, inputPath, blocks, outputPath, onProgress }) {
   if (enCurso) throw new Error('Ya hay una exportacion en curso.');
+
+  // Se resuelve ACA y no arriba del archivo: si falta el planificador,
+  // el error sale al INTENTAR exportar (con un mensaje que explica que
+  // pasa), no al cargar el modulo.
+  const { argsSegmento, argsConcat, srtDeSalida } = planificador();
 
   const salida = outputPath || rutaSalidaPorDefecto(inputPath, plan.opciones.carpetaSalida);
   const dirTemp = crearCarpetaTemporal(inputPath);

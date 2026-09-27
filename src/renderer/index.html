@@ -4,538 +4,981 @@
   <meta charset="UTF-8">
   <title>ClipForge</title>
   <style>
+    /* ============================================================
+       CLIPFORGE — CASCARA DE APLICACION (reescrita 06/08/2026)
+       ============================================================
+       Se borro toda la linea de tiempo y los visores para rehacerlos de
+       cero (copia del estado anterior en E:\Clipforge2). Esta hoja queda
+       con lo que sobrevive + los ESPACIOS VACIOS donde va lo nuevo.
+
+       CAMBIO DE FONDO respecto de la version anterior: la ventana deja de
+       ser una PAGINA QUE SE SCROLLEA y pasa a ser una GRILLA QUE LLENA LA
+       PANTALLA, como cualquier editor. Antes cada seccion se apilaba
+       hacia abajo, asi que a mas funciones, mas scroll - y se terminaba
+       haciendo scroll para ver la propia linea de tiempo. Ahora:
+
+         ┌─────────────────────────────────┐
+         │ barra                           │  ← fija
+         ├─────────────────────────────────┤
+         │ visores        │ panel lateral  │  ← 1fr, scroll propio
+         ├─────────────────────────────────┤
+         │ linea de tiempo                 │  ← alto fijo, redimensionable
+         └─────────────────────────────────┘
+
+       Los dos huecos grandes (#zonaVisores y #zonaTimeline) estan vacios
+       a proposito: son el lugar reservado para lo que se construya. */
+
+    :root {
+      --ink: #121319;
+      --panel: #1a1c24;
+      --panel-deep: #14161d;
+      --line: #2a2d38;
+      --line-soft: #1f212b;
+      --paper: #eceaf2;
+      --ash: #8c8fa3;
+      --ash-dim: #5f6275;
+      --signal: #e2a23b;
+      --signal-soft: #f4c667;
+      --signal-dim: #3a2f18;
+      --focus: #49b6c9;
+      --keep: #5cb37d;
+      --cut: #d8615f;
+      --cut-deep: #3a201f;
+      --silence: #797c8f;
+      --font-ui: -apple-system, "Segoe UI Variable", "Segoe UI", ui-sans-serif, sans-serif;
+      --font-mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+      --alto-timeline: 240px;
+      --div: 5px;   /* grosor de los divisores arrastrables */
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
     body {
-      background: #111318; color: #e5e7eb; font-family: system-ui, sans-serif;
-      margin: 0; padding: 24px;
+      margin: 0; background: var(--ink); color: var(--paper);
+      font-family: var(--font-ui); font-size: 13px; overflow: hidden;
     }
+
     button {
-      background: #2563eb; color: white; border: none; padding: 10px 16px;
-      border-radius: 6px; cursor: pointer; font-size: 14px;
+      background: var(--signal); color: #1b1300; border: none; padding: 7px 13px;
+      border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: 600;
+      font-family: var(--font-ui);
     }
-    button:disabled { background: #374151; cursor: not-allowed; }
-    button.secundario { background: #374151; }
-    #estado { margin-top: 16px; color: #9ca3af; }
-    #transcripcion { margin-top: 20px; white-space: pre-wrap; line-height: 1.6; }
-    .seccion { margin-top: 32px; border-top: 1px solid #2a2e37; padding-top: 20px; }
-    input[type=text] {
-      background: #1a1d24; border: 1px solid #374151; color: #e5e7eb;
-      padding: 8px 10px; border-radius: 6px; font-size: 14px;
-    }
-    #listaKeys { margin-top: 12px; }
-    .key-item {
-      display: flex; align-items: center; gap: 10px; padding: 6px 0;
-      border-bottom: 1px solid #1f2229; font-size: 13px;
-    }
-    .key-proveedor { color: #60a5fa; min-width: 140px; }
-    .key-nombre { color: #e5e7eb; flex: 1; }
-    .key-mask { color: #6b7280; font-family: monospace; }
-    .btn-eliminar { background: #7f1d1d; padding: 4px 10px; font-size: 12px; }
+    button:disabled { background: var(--line); color: var(--ash-dim); cursor: not-allowed; }
+    button.secundario { background: var(--panel); color: var(--paper); border: 1px solid var(--line); font-weight: 500; }
+    button.secundario:hover:not(:disabled) { border-color: var(--signal); }
+    button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-    /* Editor de cortes */
-    #resumenCortes {
-      display: flex; gap: 24px; margin: 14px 0; font-size: 13px; color: #9ca3af;
+    h2 {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--ash); margin: 0 0 8px; padding-left: 8px;
+      border-left: 2px solid var(--signal);
     }
-    #resumenCortes b { color: #e5e7eb; font-size: 16px; display: block; }
-    .bloque {
-      padding: 6px 10px; margin-bottom: 3px; border-radius: 4px; cursor: pointer;
-      font-size: 14px; line-height: 1.5; border-left: 3px solid transparent;
-    }
-    .bloque .ts { color: #6b7280; font-size: 11px; margin-right: 8px; font-family: monospace; }
-    .bloque.speech.keep { background: #161a22; border-left-color: #22c55e; }
-    .bloque.speech.cut { background: #1f1416; border-left-color: #ef4444; color: #9ca3af; text-decoration: line-through; }
-    .bloque.silence { background: #14181f; border-left-color: #6b7280; color: #6b7280; font-style: italic; font-size: 12px; }
-    .bloque.silence.keep { border-left-color: #eab308; text-decoration: none; }
-    .bloque.propuesta { background: #2a2410; border-left-color: #eab308; color: #fde68a; }
-    .bloque:hover { outline: 1px solid #374151; }
-    #botonesExport { margin-top: 16px; display: flex; gap: 10px; }
 
-    /* Analisis con IA */
-    #panelIA { display: none; }
-    #panelIA .filaIA { display: flex; gap: 20px; margin-bottom: 12px; }
-    #panelIA label { color: #9ca3af; font-size: 13px; display: block; margin-bottom: 4px; }
-    #panelIA select, #panelIA textarea {
-      background: #1a1d24; border: 1px solid #374151; color: #e5e7eb;
-      padding: 8px 10px; border-radius: 6px; font-size: 13px; width: 260px;
-    }
-    #panelIA textarea { width: 100%; min-height: 60px; font-family: inherit; }
-    #panelIA details { margin-bottom: 10px; }
-    #panelIA summary { color: #9ca3af; font-size: 13px; cursor: pointer; }
-    #estadoIA { margin-top: 10px; font-size: 13px; color: #9ca3af; }
+    /* ---------- Cascara ----------
+       Una sola grilla de 5 columnas x 4 filas:
 
-    /* Visor de video + timeline (seccion 7.8 CTX_PROYECTO_CLIPFORGE_1D.md) */
-    #visorContainer video {
-      display: block;
-      width: auto;
-      height: auto;
-      min-height: 220px;
-      max-width: 100%;
-      max-height: 480px;
-      margin: 0 auto;
-      background: #000;
-      border-radius: 6px;
-    }
-    #contadorTiempo { margin-top: 8px; font-family: monospace; color: #9ca3af; font-size: 13px; }
-    /* Linea de tiempo MAESTRA (pedido 29/07/2026): agrupa bloques de habla +
-       franja de cobertura + pistas de recuadros bajo un solo eje de tiempo,
-       con un playhead que las atraviesa todas. Clic/arrastre en cualquier
-       parte mueve el video a ese punto - reemplaza la necesidad de usar el
-       control nativo del <video> para navegar (ver renderer.js). */
-    /* Controles de zoom + recorte (pedido 31/07/2026), arriba de la
-       timeline maestra. */
-    #timelineControlesRow {
-      display: flex; align-items: center; gap: 14px; margin-top: 10px;
-      flex-wrap: wrap; font-size: 12px; color: #9ca3af;
-    }
-    #timelineControlesRow .grupo { display: flex; align-items: center; gap: 6px; }
-    #timelineControlesRow button.secundario { padding: 4px 10px; font-size: 12px; }
-    #zoomNivelTexto { min-width: 42px; text-align: center; display: inline-block; }
-    #recorteTexto { font-family: monospace; }
-    #timelineControlesRow label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+         col:   latIzq | div | visores | div | latDer
+         fila:  barra
+                cuerpo
+                div horizontal
+                linea de tiempo
 
-    /* Contenedor con scroll horizontal: el zoom agranda el ANCHO real de
-       #timelineMaestraWrap (ver JS, style.width en %), y como todo lo de
-       adentro (bloques, franja de cobertura, pistas, playhead, recorte)
-       ya se posiciona con % relativo a ese ancho, escalan solos sin tener
-       que tocar ninguna de las funciones de render existentes. */
-    #timelineScrollWrap {
-      overflow-x: auto; overflow-y: hidden; margin-top: 6px;
-      border-radius: 4px; position: relative;
+       Todo se ubica con grid-area explicita. Eso permite dos cosas que
+       con contenedores anidados serian un dolor:
+         - Los DIVISORES son celdas de la grilla, asi que arrastrarlos es
+           solo cambiar una variable CSS (--lat-izq, --lat-der,
+           --alto-timeline). No hay que recalcular nada mas.
+         - Un lateral puede BAJAR HASTA ABAJO (span de filas), y entonces
+           la linea de tiempo se achica de ancho en vez de quedar tapada,
+           que es como se comporta un editor de verdad. */
+    /* DOS NIVELES DE VARIABLE, a proposito (corregido 06/08/2026).
+       Bug real: arrastrar un divisor guarda el ancho como estilo EN LINEA
+       sobre <body>, y un estilo en linea le gana a cualquier regla de
+       clase. Con la grilla leyendo --lat-der directo, la regla
+       "body.sin-lat-der { --lat-der: 0 }" quedaba pisada y el panel ya no
+       se escondia - pero solo DESPUES de haber arrastrado ese divisor
+       alguna vez, que es lo que lo hacia parecer intermitente.
+       Ahora la grilla lee --w-*, que se deriva de --lat-* en una regla
+       normal de body. Las clases de plegado pisan --w-* y le ganan por
+       especificidad (body.clase > body), sin importar que haya inline. */
+    body { --w-izq: var(--lat-izq, 250px); --w-der: var(--lat-der, 330px); }
+    #app {
+      display: grid; height: 100vh;
+      grid-template-columns: var(--w-izq) var(--div) 1fr var(--div) var(--w-der);
+      grid-template-rows: auto 1fr var(--div) var(--alto-timeline);
     }
-    #timelineMaestraWrap { position: relative; cursor: pointer; width: 100%; min-width: 100%; }
-    #timelineWrap {
-      position: relative; height: 48px; background: #161a22;
-      border-radius: 4px; overflow: hidden; border: 1px solid #262a33;
-    }
-    #timelineBlocks { position: relative; width: 100%; height: 100%; }
-    .tlseg { position: absolute; top: 6px; bottom: 6px; border-radius: 2px; cursor: pointer; }
-    .tlseg.speech.keep { background: #22c55e; }
-    .tlseg.speech.cut { background: #ef4444; opacity: 0.55; }
-    .tlseg.speech.propuesta { background: #eab308; }
-    .tlseg.silence { background: #4b5563; top: 16px; bottom: 16px; }
-    .tlseg:hover { outline: 1px solid #e5e7eb; }
-    #playhead {
-      position: absolute; top: 0; bottom: 0; left: 0; width: 2px;
-      background: #f87171; pointer-events: none; z-index: 6;
-    }
-    .bloque.resaltado { outline: 2px solid #60a5fa; }
+    #barra        { grid-area: 1 / 1 / 2 / 6; }
+    #lateralIzq   { grid-area: 2 / 1 / 3 / 2; }
+    #divIzq       { grid-area: 2 / 2 / 3 / 3; }
+    #zonaVisores  { grid-area: 2 / 3 / 3 / 4; }
+    #divDer       { grid-area: 2 / 4 / 3 / 5; }
+    #lateralDer   { grid-area: 2 / 5 / 3 / 6; }
+    #divH         { grid-area: 3 / 1 / 4 / 6; }
+    #zonaTimeline { grid-area: 4 / 1 / 5 / 6; }
 
-    /* Recorte (rango de trabajo) del video, pedido 31/07/2026: oscurece
-       lo que queda FUERA de [inicio,fin] y 2 manijas arrastrables en los
-       bordes del rango. Viven dentro de #timelineMaestraWrap para
-       escalar solas con el zoom, igual que el resto (%). */
-    #trimOverlayIzq, #trimOverlayDer {
-      position: absolute; top: 0; bottom: 0; background: rgba(0,0,0,0.6);
-      pointer-events: none; z-index: 3;
-    }
-    #trimHandleIn, #trimHandleOut {
-      position: absolute; top: 0; bottom: 0; width: 10px; margin-left: -5px;
-      background: #fbbf24; cursor: ew-resize; z-index: 7; border-radius: 2px;
-      box-shadow: 0 0 0 1px rgba(0,0,0,0.4);
-    }
-    #trimHandleIn:hover, #trimHandleOut:hover,
-    #trimHandleIn.arrastrando, #trimHandleOut.arrastrando { background: #fde047; }
+    /* Lateral extendido hasta abajo: se estira sobre las filas del
+       divisor y de la linea de tiempo, y esta se angosta. */
+    body.izq-abajo #lateralIzq, body.izq-abajo #divIzq { grid-row: 2 / 5; }
+    body.izq-abajo #divH, body.izq-abajo #zonaTimeline { grid-column-start: 3; }
+    body.der-abajo #lateralDer, body.der-abajo #divDer { grid-row: 2 / 5; }
+    body.der-abajo #divH, body.der-abajo #zonaTimeline { grid-column-end: 4; }
 
-    /* Recuadros (crop boxes) + visor 9:16 split layout */
-    #videoWrap { position: relative; display: inline-block; max-width: 100%; }
-    #recuadrosOverlay { position: absolute; inset: 0; pointer-events: none; }
-    #recuadrosOverlay.modoActivo { pointer-events: auto; cursor: crosshair; }
-    .recuadro {
-      position: absolute; border: 2px solid #60a5fa; background: rgba(96,165,250,0.15);
-      box-sizing: border-box; cursor: move; pointer-events: auto;
+    /* ---------- Divisores arrastrables ---------- */
+    .divisor { background: var(--line); position: relative; }
+    .divisor::after {
+      /* Area de agarre mas grande que la linea visible: una linea de 5px
+         es incomoda de agarrar, pero una de 15 se ve gruesa. */
+      content: ""; position: absolute; inset: -5px; z-index: 5;
     }
-    .recuadro.moviendo, .recuadro.redimensionando { border-color: #34d399; background: rgba(52,211,153,0.2); }
-    .recuadro .rNum {
-      position: absolute; top: -1px; left: -1px; background: #60a5fa; color: #0b1220;
-      font-size: 11px; font-weight: bold; padding: 1px 5px; border-radius: 0 0 4px 0;
-    }
-    .recuadro .rBorrar {
-      position: absolute; top: -1px; right: -1px; background: #ef4444; color: white;
-      font-size: 11px; line-height: 1; padding: 3px 6px; border-radius: 0 0 0 4px;
-      cursor: pointer; pointer-events: auto;
-    }
-    .recuadro .rHandle {
-      position: absolute; width: 12px; height: 12px; background: #60a5fa;
-      border: 1px solid #0b1220; border-radius: 3px; pointer-events: auto; z-index: 2;
-    }
-    .recuadro .rHandle.tl { top: -6px; left: -6px; cursor: nwse-resize; }
-    .recuadro .rHandle.tr { top: -6px; right: -6px; cursor: nesw-resize; }
-    .recuadro .rHandle.bl { bottom: -6px; left: -6px; cursor: nesw-resize; }
-    .recuadro .rHandle.br { bottom: -6px; right: -6px; cursor: nwse-resize; }
-    #controlesRecuadros { margin-top: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    #controlesRecuadros button.activo { background: #16a34a; }
-    #hintRecuadros { color: #6b7280; font-size: 12px; }
+    .divisor:hover, .divisor.arrastrando { background: var(--signal); }
+    .divisor.vert { cursor: col-resize; }
+    .divisor.horiz { cursor: row-resize; }
+    /* Con el lateral plegado su divisor no tiene sentido: no hay nada que
+       redimensionar y solo confundiria. */
+    body.sin-lat-izq #divIzq, body.sin-lat-der #divDer { display: none; }
 
-    /* Timeline de TRAMOS de recuadros (recuadros que varian en el tiempo,
-       29/07/2026) - franja fina debajo de controlesRecuadros, un tramo por
-       banda; clic selecciona cual tramo se esta editando ahora mismo. */
-    #layoutTimelineWrap { margin-top: 10px; }
-    #layoutTimelineWrap .hintLayout { color: #6b7280; font-size: 12px; margin-bottom: 4px; }
-    #layoutTimelineBands {
-      position: relative; height: 26px; background: #161a22;
-      border-radius: 4px; overflow: hidden; border: 1px solid #262a33;
-      margin-top: 6px;
+    #barra {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 7px 12px; background: var(--panel-deep);
+      border-bottom: 1px solid var(--line);
     }
-    .layoutBanda {
-      position: absolute; top: 1px; bottom: 1px; border-radius: 2px; cursor: pointer;
-      background: #262a33; border: 1px solid #374151; display: flex; align-items: center;
-      justify-content: center; overflow: hidden;
+    #barra .marca {
+      font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+      letter-spacing: 0.14em; text-transform: uppercase; margin-right: 4px;
     }
-    .layoutBanda span { color: #9ca3af; font-size: 10px; white-space: nowrap; padding: 0 4px; }
-    .layoutBanda:hover { border-color: #60a5fa; }
-    /* Cobertura de recuadros por tramo (pedido 29/07/2026): color a simple
-       vista para detectar huecos sin recuadro, igual que un editor de video
-       muestra pistas vacias vs con contenido. */
-    .layoutBanda.sinRecuadro { background: #3f1d1d; border-color: #7f1d1d; }
-    .layoutBanda.sinRecuadro span { color: #fca5a5; }
-    .layoutBanda.conRecuadro { background: #14291d; border-color: #16653f; }
-    .layoutBanda.conRecuadro span { color: #86efac; }
-    .layoutBanda.activo { background: #1e3a5f; border-color: #60a5fa; }
-    .layoutBanda.activo span { color: #e5e7eb; }
-    #controlesLayout { margin-top: 6px; display: flex; gap: 8px; flex-wrap: wrap; }
+    #barra .sep { width: 1px; height: 16px; background: var(--line); }
+    #barra .espacio { flex: 1; }
+    #archivoElegido {
+      font-family: var(--font-mono); font-size: 11px; color: var(--ash-dim);
+      max-width: 40ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    select {
+      background: var(--panel); border: 1px solid var(--line); color: var(--paper);
+      padding: 5px 7px; border-radius: 4px; font-size: 12px; font-family: var(--font-ui);
+    }
 
-    /* Pistas de clips independientes (rediseño 29/07/2026, reemplaza el
-       modelo de "tramos" - cada clip tiene su propio start/end/track,
-       convive con la franja roja/verde de arriba, pedido explicito del
-       user). Alto de fila (30px) coincide con TRACK_ROW_HEIGHT en
-       renderer.js para que el arrastre vertical cambie de pista de forma
-       predecible. */
-    #clipsTracksRows {
-      margin-top: 6px; border: 1px solid #262a33; border-radius: 4px;
-      overflow: hidden;
+    /* Tres columnas: lateral | visores | lateral. Cada lateral se retrae
+       con su boton en las puntas de la barra, para dejarle todo el ancho
+       al visor cuando hace falta mirar el video en serio.
+       Se colapsa cambiando el ancho de la COLUMNA (no ocultando el panel)
+       para que la transicion sea suave y el visor recupere el espacio. */
+    /* Pisan --w-*, NO --lat-*: ver la nota de los dos niveles de variable
+       mas arriba. Si se cambian a --lat-* vuelve el bug de que el panel
+       deja de esconderse despues de arrastrar su divisor. */
+    body.sin-lat-izq { --w-izq: 0px; }
+    body.sin-lat-der { --w-der: 0px; }
+
+    #zonaVisores {
+      display: grid; place-items: stretch; min-width: 0; min-height: 0;
+      background: var(--ink); padding: 14px;
+      border-left: 1px solid var(--line); border-right: 1px solid var(--line);
     }
-    .trackRow { position: relative; height: 30px; background: #10131a; border-bottom: 1px solid #1f2229; }
-    .trackRow:last-child { border-bottom: none; }
-    .trackRow.fantasma {
-      background: repeating-linear-gradient(45deg, #10131a, #10131a 6px, #161a22 6px, #161a22 12px);
+
+    /* ---------- Visor del MONTAJE (06/08/2026) ----------
+       No es un reproductor del archivo: muestra lo que quedo armado en la
+       linea de tiempo. El lienzo es negro y fijo, y el video se ajusta
+       adentro con object-fit:contain - asi un vertical y un horizontal se
+       ven los dos enteros sin deformarse, y los vacios del montaje quedan
+       en negro de verdad en vez de dejar el ultimo cuadro congelado. */
+    #visor { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; }
+    /* EL LIENZO NO SE PINTA: es solo el area donde se centra el video.
+       Antes era un rectangulo negro que llenaba TODA la celda de la
+       grilla, asi que el visor se veia enorme y no se achicaba al
+       agrandar la linea de tiempo o abrir los paneles - el negro ocupaba
+       el lugar aunque el video fuera mucho mas chico.
+       Ahora el que manda es el <video>: crece hasta donde entre
+       (max-width/max-height 100%) conservando su proporcion, y el marco
+       negro es del video, no del panel. Al mover cualquier divisor, el
+       video se achica solo porque su tope es el espacio disponible. */
+    #visorLienzo {
+      flex: 1; min-height: 0; min-width: 0; position: relative; overflow: hidden;
+      display: grid; place-items: center;
     }
-    .clipBloque {
-      position: absolute; top: 2px; bottom: 2px; border-radius: 3px; cursor: grab;
-      display: flex; align-items: center; justify-content: space-between;
-      overflow: hidden; box-sizing: border-box; border: 1px solid rgba(0,0,0,0.35);
+    /* El video se ancla a los 4 lados del lienzo y se encoge con
+       object-fit:contain, en vez de tomar su tamaño natural con
+       max-width/max-height. MEDIDO: con "max-height: 100%" el navegador
+       NO recortaba (porcentaje contra un contenedor de alto indefinido se
+       trata como "none"), y con la linea de tiempo en su maximo el video
+       desbordaba el lienzo - 223px de alto dentro de 158px.
+       Anclado no puede desbordar nunca, y como el fondo es TRANSPARENTE
+       lo unico que se ve es la imagen: el sobrante no queda como un
+       rectangulo negro gigante ocupando el panel. */
+    /* El canvas es lo que se ve. Fondo transparente por lo mismo que
+       antes: con object-fit:contain el elemento es mas grande que el
+       lienzo que dibuja, y pintarlo dejaba franjas negras sin sentido.
+       El negro del lienzo lo pone el propio canvas al limpiarse. */
+    #canvas169 {
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: contain; display: block; background: transparent;
     }
-    .clipBloque.seleccionado { outline: 2px solid #e5e7eb; }
-    .clipBloque .clipEtiqueta {
-      color: #0b1220; font-size: 10px; font-weight: 600; padding: 0 4px;
-      white-space: nowrap; pointer-events: none; overflow: hidden; text-overflow: ellipsis;
+    /* Los <video> no se muestran: solo aportan cuadros y sonido. No se
+       usa display:none porque un video oculto asi puede dejar de
+       decodificar en algunos motores; se lo saca de la vista. */
+    #reservaVideos {
+      position: absolute; width: 1px; height: 1px; overflow: hidden;
+      opacity: 0; pointer-events: none; left: -9999px; top: 0;
     }
-    .clipBloque .clipBorrar {
-      color: #0b1220; font-size: 12px; line-height: 1; padding: 0 5px;
-      cursor: pointer; flex-shrink: 0;
+    /* Capa para agarrar y transformar la imagen sobre el lienzo. */
+    /* El marco solo se puede agarrar cuando el clip esta SELECCIONADO en
+       la linea de tiempo. Si no, tapaba toda la imagen y no se podian
+       dibujar recuadros encima. Asi cada gesto tiene su momento: clic en
+       el clip para encuadrarlo, video libre para marcar recuadros. */
+    #capaTransformar { position: absolute; z-index: 4; pointer-events: none; }
+    .marcoCapa {
+      position: absolute; box-sizing: border-box; pointer-events: none;
+      border: 1px dashed rgba(236,234,242,0.35);
     }
-    .clipHandle { position: absolute; top: 0; bottom: 0; width: 6px; cursor: ew-resize; }
-    .clipHandle.izq { left: 0; }
-    .clipHandle.der { right: 0; }
-    #visoresRow { display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap; }
-    #visorPrincipal { flex: 1 1 480px; min-width: 260px; }
-    #visor916Wrap { flex: 0 0 240px; width: 240px; max-width: 100%; margin-top: 0; }
-    #visor916Wrap h2 { margin-top: 0; }
+    .marcoCapa.sel { border: 1px solid var(--signal); pointer-events: auto; cursor: move; }
+    .marcoCapa:not(.sel) .tiradorCapa { display: none; }
+    .marcoCapa .tiradorCapa {
+      position: absolute; width: 11px; height: 11px;
+      background: var(--paper); border: 1px solid var(--ink); border-radius: 2px;
+    }
+    .marcoCapa .tiradorCapa.tl { left: -6px; top: -6px; cursor: nwse-resize; }
+    .marcoCapa .tiradorCapa.tr { right: -6px; top: -6px; cursor: nesw-resize; }
+    .marcoCapa .tiradorCapa.bl { left: -6px; bottom: -6px; cursor: nesw-resize; }
+    .marcoCapa .tiradorCapa.br { right: -6px; bottom: -6px; cursor: nwse-resize; }
+    #visorVacio { position: absolute; }
+    /* Los dos visores comparten fila: el 16:9 se queda con lo que sobra y
+       el vertical ocupa una franja fija a la derecha. */
+    #visores { display: flex; gap: 12px; min-width: 0; min-height: 0; }
+    #visor { flex: 1 1 auto; }
+    #visor916 { flex: 0 1 30%; display: flex; flex-direction: column; gap: 8px; min-width: 90px; min-height: 0; }
+    /* overflow:hidden es una red, no decoracion: si alguna vez una capa
+       queda con medidas viejas, se recorta en su panel en vez de
+       derramarse sobre la linea de tiempo. */
+    #lienzo916 { flex: 1; min-height: 0; position: relative; overflow: hidden; display: grid; place-items: center; }
+    /* El canvas tiene resolucion FIJA de 1080x1920 y se muestra escalado
+       con object-fit. Asi lo que se dibuja son pixeles del video vertical
+       de verdad - los mismos que va a pedir la exportacion - y no
+       depende del tamaño que tenga la ventana en este momento. */
+    /* Fondo TRANSPARENTE, por lo mismo que el visor 16:9: con
+       object-fit:contain el elemento es mas ancho que el 9:16 que dibuja,
+       y un background pintaba esa sobra como dos franjas negras a los
+       costados que no significaban nada. El negro del panel lo pone el
+       propio canvas al limpiarse, asi que ocupa exactamente el 9:16. */
     #canvas916 {
-      background: #000; border-radius: 6px; display: block;
-      width: 100%; height: auto; aspect-ratio: 9 / 16; border: 1px solid #262a33;
+      position: absolute; inset: 0; width: 100%; height: 100%;
+      object-fit: contain; background: transparent; display: block;
     }
-    /* Disposicion de celdas del visor 9:16 (pedido 30/07/2026): controles
-       de preset + boton "distribuir parejo", y manijas de arrastre
-       (divisor916) superpuestas al canvas para achicar/agrandar cada
-       celda arrastrando la linea entre 2 vecinas. */
-    #layout916Controles {
-      display: flex; gap: 8px; align-items: center; margin-bottom: 8px; flex-wrap: wrap;
+    /* La capa de celdas se superpone al canvas y se posiciona sobre el
+       9:16 dibujado, no sobre el elemento (misma razon que capaRecuadros). */
+    #capaCeldas { position: absolute; z-index: 2; }
+    .celda916 {
+      position: absolute; box-sizing: border-box;
+      border: 1px solid rgba(236,234,242,0.35); cursor: move;
     }
-    #selectLayout916Modo {
-      background: #161a22; color: #e5e7eb; border: 1px solid #2a2e37; border-radius: 4px;
-      padding: 4px 6px; font-size: 12px;
+    .celda916:hover { border-color: var(--focus); background: rgba(73,182,201,0.10); }
+    .celda916.sel { border-color: var(--signal); background: rgba(226,162,59,0.12); }
+    .celda916 .rot {
+      position: absolute; top: 2px; left: 2px; padding: 0 4px;
+      font-family: var(--font-mono); font-size: 10px; line-height: 14px;
+      background: rgba(6,24,26,0.7); color: var(--paper); border-radius: 2px;
     }
-    #btnDistribuir916 { font-size: 12px; padding: 4px 10px; }
-    #canvas916Wrap { position: relative; }
-    .divisor916 {
-      position: absolute; z-index: 5; background: transparent;
+    .celda916 .tirador916 {
+      position: absolute; right: -5px; bottom: -5px; width: 11px; height: 11px;
+      background: var(--paper); border: 1px solid var(--ink); border-radius: 2px; cursor: nwse-resize;
     }
-    .divisor916:hover, .divisor916.arrastrando { background: rgba(37, 99, 235, 0.35); }
-    #hintLayout916 { color: #6b7280; font-size: 11px; margin-top: 6px; display: block; }
+    #vacio916 { position: absolute; max-width: 90%; }
+    #barra916 { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    #barra916 .espacio { flex: 1; }
+    #aviso916 { font-family: var(--font-mono); font-size: 10px; color: var(--cut); }
 
-    /* Celdas "Libre" del visor 9:16 (30/07/2026) - mismo criterio visual
-       que .recuadro/.rHandle del visor 16:9, mismo patron de arrastre. */
-    #celdasLibres916 { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
-    .celdaLibre916 {
-      position: absolute; border: 2px dashed #34d399; box-sizing: border-box;
-      cursor: move; pointer-events: auto; background: rgba(52,211,153,0.08);
+    /* ---------- Recuadros sobre el 16:9 ---------- */
+    #capaRecuadros { position: absolute; z-index: 3; }
+    body.tl-cuchilla #capaRecuadros { pointer-events: none; }
+    .recuadro {
+      position: absolute; box-sizing: border-box;
+      border: 2px solid var(--focus); border-radius: 3px;
+      background: rgba(73, 182, 201, 0.10); cursor: move;
     }
-    .celdaLibre916.moviendo916, .celdaLibre916.redimensionando916 {
-      border-style: solid; background: rgba(52,211,153,0.22);
+    .recuadro.sel { border-color: var(--signal); background: rgba(226, 162, 59, 0.14); }
+    .recuadro .num {
+      position: absolute; top: -1px; left: -1px; padding: 0 5px;
+      font-family: var(--font-mono); font-size: 10px; line-height: 15px;
+      background: var(--focus); color: var(--ink); border-radius: 2px 0 3px 0;
     }
-    .celdaLibre916 .cHandle916 {
-      position: absolute; width: 12px; height: 12px; background: #34d399;
-      border: 1px solid #0b1220; border-radius: 3px; pointer-events: auto; z-index: 2;
+    .recuadro.sel .num { background: var(--signal); }
+    .recuadro .quitar {
+      position: absolute; top: -1px; right: -1px; width: 16px; height: 16px; padding: 0;
+      font-size: 11px; line-height: 14px; text-align: center; cursor: pointer;
+      background: var(--cut); color: #fff; border: none; border-radius: 0 3px 0 3px;
     }
-    .celdaLibre916 .cHandle916.tl { top: -6px; left: -6px; cursor: nwse-resize; }
-    .celdaLibre916 .cHandle916.tr { top: -6px; right: -6px; cursor: nesw-resize; }
-    .celdaLibre916 .cHandle916.bl { bottom: -6px; left: -6px; cursor: nesw-resize; }
-    .celdaLibre916 .cHandle916.br { bottom: -6px; right: -6px; cursor: nwse-resize; }
+    .recuadro .tirador {
+      position: absolute; width: 11px; height: 11px; background: var(--paper);
+      border: 1px solid var(--ink); border-radius: 2px;
+    }
+    .recuadro .tirador.tl { left: -6px; top: -6px; cursor: nwse-resize; }
+    .recuadro .tirador.tr { right: -6px; top: -6px; cursor: nesw-resize; }
+    .recuadro .tirador.bl { left: -6px; bottom: -6px; cursor: nesw-resize; }
+    .recuadro .tirador.br { right: -6px; bottom: -6px; cursor: nwse-resize; }
+    /* El rectangulo que se esta dibujando todavia no existe como dato. */
+    #dibujando {
+      position: absolute; z-index: 4; pointer-events: none;
+      border: 2px dashed var(--signal); background: rgba(226, 162, 59, 0.12); border-radius: 3px;
+    }
 
-    /* Transcripcion colapsable (pedido 29/07/2026) */
-    #transcripcionHeader {
-      display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+    #visorBarra { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+    #visorBarra .espacio { flex: 1; }
+    #visorTiempo { font-family: var(--font-mono); font-size: 12px; color: var(--ash); }
+    #etiquetaSaltar { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ash-dim); cursor: pointer; white-space: nowrap; }
+    #etiquetaSaltar:hover { color: var(--ash); }
+    /* Keyframes (tanda F). El rombo lleno es "hay clave en este cuadro". */
+    #grupoClaves { display: flex; align-items: center; gap: 3px; }
+    #grupoClaves button { padding: 2px 6px; font-size: 11px; white-space: nowrap; }
+    #btnClave.activa { background: var(--signal); color: #111; border-color: var(--signal); }
+    #selCurva { font-size: 11px; }
+    .tlClave {
+      position: absolute; top: 2px; width: 7px; height: 7px; margin-left: -3.5px;
+      background: #ffd34d; transform: rotate(45deg); pointer-events: none; z-index: 2;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.5);
     }
-    #transcripcionHeader h2 { margin: 0; }
-    #btnColapsarTranscripcion { padding: 4px 12px; font-size: 12px; }
-    #transcripcion {
-      max-height: 420px; overflow-y: auto; margin-top: 12px;
-      border: 1px solid #1f2229; border-radius: 6px; padding: 8px;
+    #visorFuente {
+      font-family: var(--font-mono); font-size: 11px; color: var(--ash-dim);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%;
     }
-    #transcripcion.colapsada { display: none; }
+    /* ---------- Panel multimedia (06/08/2026) ----------
+       Era un cartel de "pendiente". Se construyo porque su ausencia
+       dejaba el proyecto sin salida: borrados todos los clips, el
+       material seguia en el montaje pero no habia como volver a ponerlo
+       en la linea de tiempo. */
+    .itemMedia {
+      display: flex; align-items: center; gap: 8px; padding: 7px 8px; margin-bottom: 5px;
+      border: 1px solid var(--line); border-radius: 5px; background: var(--panel);
+      cursor: pointer; user-select: none;
+    }
+    .itemMedia:hover { border-color: var(--focus); background: var(--panel-deep); }
+    .itemMedia .icono { font-size: 13px; color: var(--focus); flex: 0 0 auto; }
+    .itemMedia .datos { min-width: 0; flex: 1; }
+    .itemMedia .nom {
+      font-size: 12px; color: var(--paper); white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .itemMedia .dur { font-family: var(--font-mono); font-size: 10px; color: var(--ash-dim); }
+    .itemMedia .poner {
+      flex: 0 0 auto; font-size: 11px; padding: 3px 7px; border-radius: 4px;
+      border: 1px solid var(--line); background: transparent; color: var(--ash); cursor: pointer;
+    }
+    .itemMedia .poner:hover { border-color: var(--signal); color: var(--signal); }
+    #listaMedia .vacio { font-size: 11px; color: var(--ash-dim); padding: 6px 2px 10px; line-height: 1.6; }
+    #btnAgregarMedia { width: 100%; }
 
-    /* Pantalla de inicio con proyectos guardados (pedido 29/07/2026) */
-    #pantallaInicio { margin-top: 20px; }
-    #pantallaInicio .inicioHeader {
-      display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
-    }
-    .proyectoCard {
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-      background: #161a22; border: 1px solid #262a33; border-radius: 6px;
-      padding: 12px 14px; margin-bottom: 8px;
-    }
-    .proyectoCard .proyectoInfo { flex: 1; min-width: 0; }
-    .proyectoCard .proyectoNombre {
-      color: #e5e7eb; font-size: 14px; font-weight: 600;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .proyectoCard .proyectoMeta { color: #6b7280; font-size: 12px; margin-top: 2px; }
-    .proyectoCard .proyectoMeta.faltante { color: #f87171; }
-    .proyectoCard button { flex-shrink: 0; }
+    .lateral { min-height: 0; min-width: 0; overflow: hidden auto; background: var(--panel-deep); }
+    .panelLateral { padding: 12px; border-bottom: 1px solid var(--line); min-width: 220px; }
 
-    /* Sistema de disposicion libre de paneles - "GUI"/"Ver" (pedido 29/07/2026).
-       Cada seccion grande de la app (Visor, Resumen, Transcripcion, Exportar,
-       Analisis IA, API Keys) queda envuelta en un .panelGUI: en uso normal se
-       ve igual que antes (cabecera oculta); con el modo GUI activo (clase
-       body.modoGUI) aparece una cabecera con drag-handle + 4 acciones, y una
-       manija de resize en la esquina. El boton "Ver" muestra/oculta cada
-       panel independientemente de su posicion/tamaño guardado. */
-    #panelesContainer { position: relative; }
-    .panelGUI {
-      position: relative; margin-top: 32px; padding-top: 20px;
-      border-top: 1px solid #2a2e37; box-sizing: border-box;
+    /* Botones de retraer, en las puntas de la barra. */
+    .btnLateral {
+      background: transparent; border: 1px solid var(--line); color: var(--ash);
+      padding: 4px 8px; font-family: var(--font-mono); font-size: 12px; line-height: 1;
     }
-    .panelBody .seccion { margin-top: 0; border-top: none; padding-top: 0; }
-    .panelGUI.oculto { display: none !important; }
-    .panelGUI.contraido .panelBody { display: none; }
-    .panelGUI.horizontal { display: inline-block; vertical-align: top; width: 48%; margin-right: 2%; }
-    .panelGUI.vertical { display: block; width: 100%; }
-    .panelGUI.arrastrando { z-index: 100; box-shadow: 0 12px 30px rgba(0,0,0,0.6); background: #14161c; }
-    /* Con altura fija el body scrollea. El descuento de la cabecera solo
-       aplica en modo GUI: fuera de el la cabecera esta display:none, y
-       restarle 40px igual dejaba una franja muerta al pie del panel. */
-    .panelGUI.alturaFija .panelBody { overflow-y: auto; height: 100%; }
-    body.modoGUI .panelGUI.alturaFija .panelBody { height: calc(100% - 46px); }
-    .panelHeaderGUI {
-      display: none; align-items: center; gap: 10px; padding: 6px 10px; margin-bottom: 8px;
-      background: #1a1d24; border: 1px solid #2a2e37; border-radius: 6px; user-select: none;
+    .btnLateral:hover { color: var(--paper); border-color: var(--signal); }
+    .btnLateral.plegado { color: var(--signal); border-color: var(--signal-dim); background: var(--signal-dim); }
+
+    @media (max-width: 1100px) {
+      /* En ventanas angostas el lateral izquierdo arranca mas angosto: el
+         visor necesita el ancho mas que el panel de material.
+         Apunta a --lat-izq (la medida base) y NO a --w-izq, para que
+         seguir pudiendo plegarlo y arrastrarlo por encima de esto.
+         Antes esta regla apuntaba a #cuerpo, que dejo de existir al
+         aplanar la grilla: era CSS muerto. */
+      body { --lat-izq: 190px; }
     }
-    body.modoGUI .panelHeaderGUI { display: flex; }
-    body.modoGUI .panelGUI { border-top-color: transparent; }
-    .panelDrag { cursor: grab; color: #6b7280; font-size: 16px; }
-    .panelDrag:active { cursor: grabbing; }
-    .panelTitulo { flex: 1; font-size: 12px; color: #9ca3af; font-weight: 600; }
-    .panelAcciones { display: flex; gap: 4px; flex-wrap: wrap; }
-    .panelAccion { background: #2a2e37; padding: 4px 8px; font-size: 11px; border-radius: 4px; }
-    .panelAccion.activo { background: #2563eb; }
-    .panelResizeHandle {
-      display: none; position: absolute; right: 2px; bottom: 2px; width: 16px; height: 16px;
-      cursor: nwse-resize; background: linear-gradient(135deg, transparent 50%, #4b5563 50%);
-      border-radius: 0 0 4px 0;
+
+    /* ---------- LINEA DE TIEMPO ----------
+       Barra de herramientas arriba, y debajo una fila con los
+       ENCABEZADOS de pista fijos a la izquierda + el area scrolleable a
+       la derecha (los encabezados no se mueven al scrollear en
+       horizontal: es lo que permite no perderse de que pista es cual).
+       El ancho del lienzo lo fija el zoom en %, y todo lo que va adentro
+       se posiciona en % del tiempo, asi escala solo. */
+    #zonaTimeline {
+      min-height: 90px; border-top: 1px solid var(--line);
+      background: var(--panel-deep); overflow: hidden;
+      display: grid; grid-template-rows: auto 1fr; min-width: 0;
     }
-    body.modoGUI .panelResizeHandle { display: block; }
-    #barraGUI { display: flex; gap: 10px; align-items: center; margin: 16px 0 0; position: relative; }
-    #btnGUI.activo, #btnVer.activo { background: #16a34a; }
-    #panelVerLista {
-      display: none; position: absolute; top: 44px; left: 0; z-index: 300;
-      background: #1a1d24; border: 1px solid #374151; border-radius: 8px; padding: 12px;
-      min-width: 240px; box-shadow: 0 12px 30px rgba(0,0,0,0.6);
+    #tlBarra {
+      display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+      padding: 5px 8px; border-bottom: 1px solid var(--line); background: var(--panel);
+      font-size: 11px; color: var(--ash);
     }
-    #panelVerLista.abierto { display: block; }
-    #panelVerLista label {
-      display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; cursor: pointer;
+    #tlBarra .sep { width: 1px; height: 15px; background: var(--line); }
+    #tlBarra .espacio { flex: 1; }
+    #tlBarra button { padding: 3px 8px; font-size: 11px; }
+    #tlBarra label { display: flex; align-items: center; gap: 4px; margin: 0; text-transform: none; letter-spacing: 0; font-size: 11px; cursor: pointer; }
+    #tlZoomTexto, #tlInfo { font-family: var(--font-mono); font-size: 10.5px; color: var(--ash-dim); }
+    #tlZoomTexto { min-width: 40px; text-align: center; }
+
+    button.herramienta {
+      background: var(--panel-deep); color: var(--ash); border: 1px solid var(--line);
+      font-weight: 500; min-width: 26px;
     }
-    #panelVerLista hr { border: none; border-top: 1px solid #2a2e37; margin: 8px 0; }
+    button.herramienta:hover { color: var(--paper); border-color: var(--ash-dim); }
+    button.herramienta.activa { background: var(--signal-dim); border-color: var(--signal); color: var(--signal-soft); }
+
+    #tlCuerpo { display: flex; min-height: 0; min-width: 0; }
+    #tlEncabezados {
+      flex: 0 0 168px; background: var(--panel-deep);   /* 128 -> 148 en la tanda D: entra el mute y el volumen del audio sin cortar el nombre; 168 en la tanda E: el candado */
+      border-right: 1px solid var(--line); overflow: hidden;
+    }
+    #tlScroll { flex: 1; min-width: 0; overflow: auto; }
+    #tlLienzo { position: relative; width: 100%; min-width: 100%; }
+
+    /* Encabezados: nombre, ocultar, altura. Uno por pista, con la misma
+       altura que su pista para que queden alineados fila a fila. */
+    .tlHead {
+      display: flex; align-items: center; gap: 4px; padding: 0 6px;
+      border-bottom: 1px solid var(--line-soft); font-size: 10.5px; color: var(--ash);
+      box-sizing: border-box;
+    }
+    .tlHead.regla { justify-content: center; font-family: var(--font-mono); color: var(--ash-dim); }
+    .tlHead.oculta { opacity: 0.45; }
+    .tlHead .nom { flex: 1; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.06em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tlHead button { background: transparent; border: 1px solid transparent; color: var(--ash-dim); padding: 1px 4px; font-size: 10px; line-height: 1.3; font-weight: 400; }
+    .tlHead button:hover { color: var(--paper); border-color: var(--line); }
+    .tlHead.audio .nom { color: var(--keep); }
+    /* Sonido de la pista (tanda D): mute y volumen. El control es angosto
+       a proposito, la columna mide 148 px. Silenciada se atenua igual que
+       una pista oculta, pero con el icono tachado para no confundirlas. */
+    .tlHead .tlGanancia { width: 30px; min-width: 0; margin: 0; padding: 0; accent-color: var(--keep); }
+    .tlHead button.activo { color: var(--signal-soft); }
+    .tlHead.silenciada .nom, .tlPista.silenciada { opacity: 0.45; }
+    /* Pista bloqueada (tanda E): el candado queda encendido y el nombre en
+       cursiva, sin atenuar (sigue sonando y viendose, solo no se corre). */
+    .tlHead.bloqueada .nom { font-style: italic; }
+    /* La banda de encuadres 9:16 se separa de las pistas: no es material,
+       es un recorte de lo que ya hay. Mismo color que los recuadros sobre
+       el visor, para que se lea como "lo mismo, visto en el tiempo". */
+    /* Renombrar la pista en el lugar: el input ocupa exactamente donde
+       estaba el nombre, asi no se mueve nada al entrar en edicion. */
+    .tlHead .nomEdit {
+      flex: 1; min-width: 0; width: auto; padding: 1px 4px;
+      font-family: var(--font-mono); font-size: 10.5px;
+      background: var(--ink); border: 1px solid var(--signal); color: var(--paper);
+      border-radius: 3px;
+    }
+
+    /* Regla de tiempo */
+    /* STICKY (tanda C): con mas pistas de las que entran, la regla se iba
+       hacia arriba con el scroll, y con ella el unico lugar para mover el
+       cabezal. Su encabezado ("tiempo") hace lo mismo del otro lado. */
+    #tlRegla { position: sticky; top: 0; z-index: 7; height: 20px; background: var(--panel); border-bottom: 1px solid var(--line); cursor: pointer; box-sizing: border-box; }
+    .tlHead.regla { position: sticky; top: 0; z-index: 1; background: var(--panel-deep); }
+    .tlMarca { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--line); }
+    .tlMarca.mayor { border-left-color: var(--ash-dim); }
+    .tlMarca span { position: absolute; left: 3px; top: 3px; font-family: var(--font-mono); font-size: 9px; color: var(--ash-dim); white-space: nowrap; }
+
+    /* Pistas y elementos */
+    .tlPista { position: relative; border-bottom: 1px solid var(--line-soft); background: var(--panel-deep); box-sizing: border-box; }
+    .tlPista.oculta { opacity: 0.3; }
+    .tlEl {
+      position: absolute; top: 2px; bottom: 2px; box-sizing: border-box;
+      border-radius: 3px; overflow: hidden; display: flex; align-items: center;
+      justify-content: center; font-family: var(--font-mono); font-size: 10px;
+      min-width: 2px; cursor: pointer;
+    }
+    .tlEl.clip { background: linear-gradient(180deg, #2b4d5c, #1f3a45); border: 1px solid var(--focus); color: #cfeaf2; }
+    .tlEl.clip.audio { background: linear-gradient(180deg, #24402f, #1a3123); border-color: var(--keep); }
+    /* Un ENCUADRE es un clip como cualquier otro y se comporta igual; se
+       pinta rayado y translucido para leer de un vistazo que NO aporta
+       imagen, sino que recorta la de las pistas de abajo. */
+    .tlEl.clip.ajuste {
+      background: repeating-linear-gradient(135deg,
+        rgba(73, 182, 201, 0.22) 0 6px, rgba(73, 182, 201, 0.08) 6px 12px);
+      border-style: dashed; border-color: var(--focus); color: #cfeaf2;
+    }
+    .tlEl.clip.sel { outline: 2px solid var(--signal); z-index: 3; }
+    .tlEl.clip:hover { border-color: var(--paper); }
+    /* El HUECO no se dibuja hasta que se lo apunta. Ocupa su tiempo igual
+       (sigue siendo un elemento de la lista: un clic lo elige y Supr lo cierra),
+       pero pintarlo siempre llenaba la pista de rayas que competian con
+       los clips por la atencion. Al pasar el mouse aparece en gris medio
+       con el borde mas claro, lo justo para verlo y agarrarlo. */
+    .tlEl.hueco {
+      background: transparent; border: 1px solid transparent; color: transparent;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
+    }
+    .tlEl.hueco .tlEtiqueta { background: transparent; color: transparent; }
+    .tlEl.hueco:hover {
+      background: rgba(140, 143, 163, 0.22);
+      border-color: rgba(236, 234, 242, 0.5);
+      color: var(--ash);
+    }
+    .tlEl.hueco:hover .tlEtiqueta { color: var(--ash); }
+    /* Vacio ELEGIDO (tanda C): el clic ya no lo cierra, lo elige, y Supr lo
+       cierra. Tiene que verse aunque el mouse se vaya: elegir algo invisible
+       y apretar Supr seria editar a ciegas. */
+    .tlEl.hueco.sel {
+      background: repeating-linear-gradient(135deg,
+        rgba(226,162,59,0.28) 0 6px, rgba(226,162,59,0.08) 6px 12px);
+      border: 1px dashed var(--signal); color: var(--signal); z-index: 3;
+    }
+    .tlEl.hueco.sel .tlEtiqueta { color: var(--signal); }
+    .tlEtiqueta { pointer-events: none; padding: 0 4px; background: rgba(6,24,26,0.55); border-radius: 2px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    /* El ancho real lo pone renderer.js segun lo que mide el clip en
+       pantalla (GestosTl.geometriaClip): 7 px como maximo, un cuarto del
+       clip, y ninguna por debajo de 20 px para que siempre quede cuerpo
+       que agarrar. */
+    .tlManija { position: absolute; top: 0; bottom: 0; width: 7px; z-index: 4; cursor: ew-resize; }
+    .tlManija.izq { left: 0; }
+    .tlManija.der { right: 0; }
+    .tlEl.clip:hover .tlManija { background: rgba(236,234,242,0.3); }
+    .tlManija:hover { background: var(--signal) !important; }
+
+
+    /* ---------- Franjas "+ pista" ----------
+       Soltar un clip aca lo pone en una pista NUEVA, como al arrastrarlo
+       mas alla de la ultima pista en DaVinci. Estan siempre visibles (en
+       vez de aparecer al empezar el arrastre) por dos motivos: si
+       aparecieran, el layout saltaria a mitad del gesto y el clip se
+       correria solo; y si no se ven, nadie descubre que existen.
+       Apagadas son casi invisibles - no compiten con el material. */
+    .tlZona {
+      background: repeating-linear-gradient(90deg,
+        var(--line-soft) 0 6px, transparent 6px 12px);
+      opacity: 0.35; border-bottom: 1px solid var(--line-soft);
+      box-sizing: border-box; position: relative;
+    }
+    .tlZona.activa {
+      opacity: 1;
+      background: repeating-linear-gradient(45deg,
+        rgba(226,162,59,0.35) 0 6px, rgba(226,162,59,0.10) 6px 12px);
+      border: 1px dashed var(--signal);
+    }
+    .tlHead.zona {
+      border-bottom: 1px solid var(--line-soft);
+      box-sizing: border-box; opacity: 0.5;
+    }
+    .tlHead.zona .nom {
+      font-size: 9px; letter-spacing: 0.08em; color: var(--ash-dim); text-align: center;
+    }
+    .tlHead.zona.activa { opacity: 1; }
+    .tlHead.zona.activa .nom { color: var(--signal); }
+
+    #tlCabezal { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--cut); pointer-events: none; z-index: 8; }
+
+    /* ---------- Arrastre en vivo (06/08/2026) ----------
+       Antes el clip no se movia hasta soltar: se soltaba a ciegas y se
+       terminaba dejando vacios enormes sin querer. Ahora el clip sigue al
+       mouse y un cartel dice cuanto se corrio, como en DaVinci. */
+    .tlEl.arrastrando { opacity: 0.9; outline: 2px solid var(--signal); z-index: 6; pointer-events: none; }
+    /* Lo que va a quedar TAPADO si se suelta aca. Un clip que desaparece
+       sin aviso es el peor resultado posible para alguien que no sabe
+       editar: que se vea venir antes de soltar. */
+    .tlEl.tapado { outline: 2px solid var(--cut); opacity: 0.35; }
+    .tlEl.tapado .tlEtiqueta { text-decoration: line-through; }
+    /* El PEDAZO que se va a comer de un clip que queda tapado a medias.
+       Marcar el clip entero mentiria: solo desaparece la parte de abajo. */
+    .tlComido {
+      position: absolute; top: 2px; bottom: 2px; z-index: 5; pointer-events: none;
+      border: 1px solid var(--cut); border-radius: 2px;
+      background: repeating-linear-gradient(45deg,
+        rgba(198,90,90,0.55) 0 6px, rgba(198,90,90,0.18) 6px 12px);
+    }
+    /* ---------- Tanda G (19/09/2026): vista previa real, iman, onda ----------
+       La fila que va a cambiar se atenua y encima se dibuja como va a
+       quedar (PreviewTl.simular aplica la misma operacion que el main). */
+    .tlZona { position: relative; }
+    .tlPista.previa > .tlEl { opacity: 0.28; }
+    .tlPrevCapa { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+    .tlPrevEl { position: absolute; top: 3px; bottom: 3px; box-sizing: border-box; border-radius: 3px;
+      border: 2px solid var(--signal); background: rgba(43, 77, 92, 0.75); }
+    .tlPrevEl.audio { background: rgba(36, 64, 47, 0.75); }
+    .tlPrevEl.ajuste { background: transparent; border-style: dashed; }
+    .tlZona .tlPrevEl { top: 1px; bottom: 1px; border-width: 1px; }
+    #tlLineaIman { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--signal);
+      pointer-events: none; z-index: 9; }
+    /* La onda va DETRAS de la etiqueta y las manijas, y nunca recibe el mouse. */
+    .tlEl canvas.tlOnda { position: absolute; top: 0; height: 100%; pointer-events: none; z-index: 0; }
+    .tlEl.clip.audio .tlEtiqueta { position: relative; z-index: 1; }
+    #tlDesfase {
+      position: absolute; z-index: 9; pointer-events: none; transform: translateX(-50%);
+      background: var(--ink); border: 1px solid var(--signal); color: var(--signal);
+      font-family: var(--font-mono); font-size: 11px; padding: 2px 6px; border-radius: 3px;
+      white-space: nowrap;
+    }
+
+    /* El cursor dice que herramienta esta activa, sin tener que mirar la
+       barra. Y con la cuchilla las manijas no estorban: ahi el gesto es
+       cortar, no estirar. */
+    body.tl-cuchilla #tlPistas { cursor: crosshair; }
+    body.tl-cuchilla .tlManija { pointer-events: none; background: transparent !important; }
+    body.tl-slip .tlEl.clip, body.tl-slide .tlEl.clip { cursor: ew-resize; }
+    /* Cartel de "acá va lo que falta". Es deliberado que se vea: deja
+       explicito que el espacio esta reservado y no es un error. */
+    .pendiente {
+      font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--ash-dim); text-align: center; line-height: 1.9;
+      border: 1px dashed var(--line); border-radius: 6px; padding: 18px 26px;
+    }
+    .pendiente b { display: block; color: var(--ash); font-size: 12px; letter-spacing: 0.14em; }
+
+    /* ---------- Pantalla de inicio ---------- */
+    #pantallaInicio {
+      position: absolute; inset: 0; background: var(--ink); z-index: 20;
+      padding: 40px; overflow-y: auto;
+    }
+    #pantallaInicio h1 { font-size: 19px; margin: 0 0 4px; letter-spacing: 0.02em; }
+    #pantallaInicio .sub { color: var(--ash-dim); font-size: 12px; margin-bottom: 22px; }
+    #listaProyectos { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); margin-top: 16px; }
+    .tarjetaProyecto {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+      padding: 11px 13px; cursor: pointer;
+    }
+    .tarjetaProyecto:hover { border-color: var(--signal); }
+    .tarjetaProyecto.faltante { opacity: 0.5; cursor: not-allowed; }
+    .tarjetaProyecto .nom { font-size: 13px; margin-bottom: 3px; }
+    .tarjetaProyecto .meta { font-family: var(--font-mono); font-size: 10.5px; color: var(--ash-dim); }
+
+    /* ---------- Editor de bloques ---------- */
+    #resumenCortes { display: flex; gap: 1px; background: var(--line-soft); border-radius: 5px; overflow: hidden; margin-bottom: 10px; }
+    #resumenCortes > div {
+      flex: 1; background: var(--panel); padding: 7px 9px;
+      font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ash);
+    }
+    #resumenCortes b {
+      display: block; color: var(--paper); font-size: 15px;
+      font-family: var(--font-mono); text-transform: none; letter-spacing: 0;
+    }
+    #transcripcion { max-height: 300px; overflow-y: auto; border: 1px solid var(--line-soft); border-radius: 5px; padding: 6px; }
+    .bloque {
+      padding: 5px 8px; margin-bottom: 2px; border-radius: 4px; cursor: pointer;
+      font-size: 12.5px; line-height: 1.45; border-left: 3px solid transparent;
+    }
+    .bloque .ts { color: var(--ash-dim); font-size: 10px; margin-right: 6px; font-family: var(--font-mono); }
+    .bloque.speech.keep { background: var(--panel); border-left-color: var(--keep); }
+    .bloque.speech.cut { background: var(--cut-deep); border-left-color: var(--cut); color: var(--ash); text-decoration: line-through; }
+    .bloque.silence { background: #12141a; border-left-color: var(--silence); color: var(--silence); font-style: italic; font-size: 11.5px; }
+    .bloque.propuesta { background: var(--signal-dim); border-left-color: var(--signal); color: var(--signal-soft); }
+    .bloque:hover { outline: 1px solid var(--line); }
+    .filaBotones { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 9px; }
+    .filaBotones button { padding: 5px 9px; font-size: 11px; }
+    #sugerenciasTexto { font-size: 11px; color: var(--ash-dim); font-family: var(--font-mono); }
+
+    /* ---------- IA y keys ---------- */
+    label { color: var(--ash); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 3px; }
+    textarea, input[type=text] {
+      background: var(--panel); border: 1px solid var(--line); color: var(--paper);
+      padding: 6px 8px; border-radius: 4px; font-size: 12px; width: 100%; font-family: var(--font-ui);
+    }
+    textarea { min-height: 52px; resize: vertical; }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--signal); }
+    .campo { margin-bottom: 8px; }
+    .key-item {
+      display: flex; align-items: center; gap: 7px; padding: 5px 0;
+      border-bottom: 1px solid var(--line-soft); font-size: 11.5px;
+    }
+    .key-proveedor { color: var(--focus); font-family: var(--font-mono); font-size: 10.5px; min-width: 92px; }
+    .key-nombre { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .key-mask { color: var(--ash-dim); font-family: var(--font-mono); font-size: 10.5px; }
+    .btn-eliminar { background: var(--cut-deep); color: #f2b8b6; padding: 3px 8px; font-size: 10.5px; }
+    .ayuda { color: var(--ash-dim); font-size: 10.5px; line-height: 1.45; margin: 0 0 8px; }
+    .ayuda.ok { color: var(--focus); }
+
+    #estado, #estadoIA, #exportEstado { font-size: 11.5px; color: var(--ash); margin-top: 8px; min-height: 1em; }
+    #exportProgreso { width: 100%; margin-top: 8px; }
+    .oculto { display: none !important; }
   </style>
 </head>
 <body>
+
+<div id="pantallaInicio">
   <h1>ClipForge</h1>
+  <div class="sub">Editor de shorts — transcribí, cortá y armá verticales.</div>
+  <button id="btnNuevoProyecto">+ Nuevo proyecto</button>
+  <div id="listaProyectos"></div>
+</div>
 
-  <div id="pantallaInicio">
-    <div class="inicioHeader">
-      <h2 style="font-size:16px;margin:0;">Proyectos</h2>
-      <button id="btnNuevoProyecto">+ Nuevo proyecto</button>
+<div id="app" class="oculto">
+
+  <div id="barra">
+    <button id="btnLatIzq" class="btnLateral" title="Mostrar u ocultar el panel izquierdo">◧</button>
+    <button id="btnIzqAbajo" class="btnLateral" title="Extender el panel izquierdo hasta abajo (achica la línea de tiempo)">⬓</button>
+    <span class="marca">ClipForge</span>
+    <span class="sep"></span>
+    <button id="btnInicio" class="secundario">Proyectos</button>
+    <button id="btnElegir" class="secundario">Abrir archivo</button>
+    <select id="selectorMotor" title="Motor de transcripción">
+      <option value="whisperx">WhisperX (local · GPU · dice quién habla)</option>
+      <option value="fasterwhisper">faster-whisper (local · GPU)</option>
+      <option value="nvidia">NVIDIA Parakeet (nube · no usa tu PC)</option>
+    </select>
+    <button id="btnTranscribir" disabled>Transcribir</button>
+    <span class="sep"></span>
+    <span id="archivoElegido">Ningún archivo</span>
+    <span class="espacio"></span>
+    <span id="estado"></span>
+    <button id="btnDerAbajo" class="btnLateral" title="Extender el panel derecho hasta abajo (achica la línea de tiempo)">⬓</button>
+    <button id="btnLatDer" class="btnLateral" title="Mostrar u ocultar el panel derecho">◨</button>
+  </div>
+
+    <div id="lateralIzq" class="lateral">
+      <div class="panelLateral">
+        <h2>Material</h2>
+        <div id="listaMedia"></div>
+        <button id="btnAgregarMedia" class="secundario" title="Sumar otro archivo al material de este proyecto">+ Añadir archivo</button>
+      </div>
+      <div class="panelLateral">
+        <h2>Efectos</h2>
+        <div class="pendiente" style="padding:14px 16px;">
+          <b>Pendiente</b>
+          zoom, seguimiento, transiciones
+        </div>
+      </div>
     </div>
-    <div id="listaProyectos"><p style="color:#6b7280;font-size:13px;">Cargando...</p></div>
-  </div>
 
-  <div id="pantallaTrabajo" style="display:none;">
-  <button id="btnVolverProyectos" class="secundario" style="margin-bottom:16px;">&larr; Proyectos</button>
-  <button id="btnElegir">Elegir video/audio</button>
-  <span id="archivoElegido" style="margin-left:12px;color:#9ca3af;"></span>
-  <br><br>
-  <label for="selectorMotor" style="color:#9ca3af;">Motor:</label>
-  <select id="selectorMotor" style="margin-left:6px;margin-right:12px;">
-    <option value="whisperx">WhisperX (local, con timestamps por palabra)</option>
-    <option value="fasterwhisper">faster-whisper (local, mas rapido)</option>
-    <option value="descript" disabled>Descript (API) - pendiente de integrar</option>
-  </select>
-  <button id="btnTranscribir" disabled>Transcribir</button>
-  <div id="estado"></div>
+    <div id="divIzq" class="divisor vert" title="Arrastra para cambiar el ancho"></div>
 
-  <div id="barraGUI">
-    <button id="btnGUI" class="secundario">GUI</button>
-    <button id="btnVer" class="secundario">Ver</button>
-    <div id="panelVerLista"></div>
-  </div>
+    <div id="zonaVisores">
+      <div id="visores">
 
-  <div id="panelesContainer">
-  <div id="visorContainer" class="seccion" data-panel-id="visor" data-panel-titulo="Visor">
-    <h2 style="font-size:16px;">Visor</h2>
-    <div id="visoresRow">
-      <div id="visorPrincipal">
-        <div id="videoWrap">
-          <video id="videoPreview" controls></video>
-          <div id="recuadrosOverlay"></div>
-        </div>
-        <div id="contadorTiempo"><span id="tiempoTexto">00:00 / 00:00</span> &nbsp;·&nbsp; <span id="contadorCortesTL">0</span> cortes</div>
-        <div id="timelineControlesRow">
-          <div class="grupo">
-            <button id="btnZoomOut" class="secundario" title="Alejar (Ctrl+rueda tambien funciona)">－</button>
-            <span id="zoomNivelTexto">100%</span>
-            <button id="btnZoomIn" class="secundario" title="Acercar (Ctrl+rueda tambien funciona)">＋</button>
-            <button id="btnZoomReset" class="secundario" title="Restablecer zoom">Ajustar</button>
-          </div>
-          <div class="grupo">
-            <button id="btnMarcarInicio" class="secundario" title="Marca el inicio del recorte en el punto actual del video">Marcar inicio</button>
-            <button id="btnMarcarFin" class="secundario" title="Marca el fin del recorte en el punto actual del video">Marcar fin</button>
-            <button id="btnRestablecerRecorte" class="secundario" title="Vuelve el recorte al video completo">Restablecer recorte</button>
-            <label><input type="checkbox" id="chkLimitarRecorte"> Reproducir solo el recorte</label>
-            <span id="recorteTexto"></span>
-          </div>
-        </div>
-        <div id="timelineScrollWrap">
-          <div id="timelineMaestraWrap" title="Clic o arrastra para mover el video a ese punto">
-            <div id="timelineWrap">
-              <div id="timelineBlocks"></div>
+        <div id="visor">
+          <div id="visorLienzo">
+            <!-- EL LIENZO. Lo que se ve es este canvas, no un <video>: es
+                 una base sobre la que se dibujan las capas del montaje,
+                 cada una con su tamaño y posicion. Los <video> viven
+                 escondidos en #reservaVideos y solo aportan los cuadros
+                 (y el sonido). -->
+            <canvas id="canvas169" width="1280" height="720"></canvas>
+            <!-- El <video> sigue existiendo pero ESCONDIDO: es el que
+                 decodifica los cuadros, lleva el tiempo y reproduce el
+                 sonido. Lo que se ve es el canvas de arriba. -->
+            <div id="reservaVideos" aria-hidden="true">
+              <video id="visorVideo" preload="auto"></video>
             </div>
-            <div id="layoutTimelineBands"></div>
-            <div id="clipsTracksRows"></div>
-            <div id="trimOverlayIzq"></div>
-            <div id="trimOverlayDer"></div>
-            <div id="trimHandleIn" title="Arrastra para mover el inicio del recorte"></div>
-            <div id="trimHandleOut" title="Arrastra para mover el fin del recorte"></div>
-            <div id="playhead"></div>
+            <div id="capaTransformar"></div>
+            <!-- Se posiciona sobre la IMAGEN, no sobre el elemento: con
+                 object-fit:contain hay franjas negras que no son video, y
+                 un recuadro dibujado ahi apuntaria a pixeles que no
+                 existen en el archivo. -->
+            <div id="capaRecuadros"></div>
+            <div id="visorVacio" class="pendiente oculto">
+              <b>Sin material</b>
+              no hay nada en este punto del montaje
+            </div>
+          </div>
+          <div id="visorBarra">
+            <button id="btnVisorInicio" class="secundario" title="Ir al principio (Inicio)">⏮</button>
+            <button id="btnVisorPlay" title="Reproducir / Pausar (Espacio)">▶</button>
+            <span id="visorTiempo">00:00 / 00:00</span>
+            <label id="etiquetaSaltar" title="Al llegar a un vacío, saltar al próximo material en vez de atravesarlo. Apagado, el vacío se reproduce en negro y se sigue escuchando el audio que haya.">
+              <input type="checkbox" id="chkSaltarVacios"> Saltar vacíos
+            </label>
+            <span id="grupoClaves">
+              <button id="btnClaveAnt" class="secundario" title="Ir a la clave anterior del clip elegido" disabled>◂◆</button>
+              <button id="btnClave" class="secundario" title="Elegí un clip de video o un encuadre para animarlo" disabled>◆ Clave</button>
+              <button id="btnClaveSig" class="secundario" title="Ir a la clave siguiente del clip elegido" disabled>◆▸</button>
+              <select id="selCurva" title="Cómo se llega desde esta clave hasta la siguiente" disabled>
+                <option value="lineal">Lineal</option>
+                <option value="suave">Suave</option>
+                <option value="mantener">Salto</option>
+              </select>
+            </span>
+            <span class="espacio"></span>
+            <span id="visorFuente"></span>
           </div>
         </div>
-        <div id="controlesRecuadros">
-          <button id="btnModoRecuadro" class="secundario">+ Recuadro (dibujar)</button>
-          <button id="btnLimpiarRecuadros" class="secundario">Limpiar recuadros</button>
-          <span id="hintRecuadros">Dibuja un recuadro sobre el video en el punto donde esta el playhead - crea un clip nuevo de ~3s, con su propio tiempo (editable en la linea de tiempo maestra de arriba). Arrastra el centro para moverlo, las esquinas para cambiar su tamaño/forma.</span>
-        </div>
-        <div id="layoutTimelineWrap">
-          <div class="hintLayout">Linea de tiempo maestra: clic o arrastra en cualquier parte (bloques de habla, franja de cobertura, o pistas de recuadros) para mover el video a ese punto exacto - ya no hace falta usar el control del reproductor. Cobertura: <span style="color:#fca5a5;">rojo = sin recuadro</span>, <span style="color:#86efac;">verde = con recuadro</span> en ese momento. Cada recuadro es un bloque en su propia pista - arrastralo para moverlo en el tiempo, sus bordes para achicar/agrandar cuanto dura, o subilo/bajalo a otra fila (si no existe todavia, se crea sola).</div>
-          <div id="controlesLayout">
-            <button id="btnExportarLayoutsJson" class="secundario">Exportar recuadros (JSON)</button>
+
+        <div id="visor916">
+          <div id="lienzo916">
+            <canvas id="canvas916" width="1080" height="1920"></canvas>
+            <div id="capaCeldas"></div>
+            <div id="vacio916" class="pendiente">
+              <b>9:16</b>
+              arrastrá sobre el video<br>para marcar qué se ve acá
+            </div>
+          </div>
+          <div id="barra916">
+            <select id="preset916" title="Cómo se acomodan los recuadros en el panel vertical">
+              <option value="">Acomodar…</option>
+              <option value="vertical">Apilados</option>
+              <option value="horizontal">Lado a lado</option>
+              <option value="grid">Grilla</option>
+              <option value="destacado">1 grande arriba</option>
+            </select>
+            <span class="espacio"></span>
+            <span id="aviso916"></span>
           </div>
         </div>
+
       </div>
-      <div id="visor916Wrap">
-        <h2 style="font-size:16px;">Vista 9:16 (split layout)</h2>
-        <div id="layout916Controles">
-          <select id="selectLayout916Modo" title="Como se acomodan los recuadros activos en el visor 9:16">
-            <option value="vertical">Apilado vertical</option>
-            <option value="horizontal">Apilado horizontal</option>
-            <option value="grid">Cuadricula automatica</option>
-            <option value="libre">Libre (posicion manual)</option>
-          </select>
-          <button id="btnDistribuir916" class="secundario" title="Recalcula todas las celdas para que queden del mismo tamaño">Distribuir parejo</button>
+    </div>
+
+    <div id="divDer" class="divisor vert" title="Arrastra para cambiar el ancho"></div>
+
+    <div id="lateralDer" class="lateral">
+      <!-- EXPORTAR VIDEO (13/09/2026, 1.3.b). El bucle esta en
+           exportVideo.js; aca solo los botones. Desde la tanda D sale con
+           la mezcla de audio (voz + musica). El VISOR sigue con un solo
+           <video> y no mezcla: se dice en pantalla para que nadie crea que
+           la musica no va a salir porque no la escucha en el preview. -->
+      <div class="panelLateral" id="panelExportVideo">
+        <h2>Exportar video</h2>
+        <div class="filaBotones">
+          <button id="btnExportVertical" title="Lo que se ve en el panel 9:16, con los encuadres">MP4 vertical 9:16</button>
+          <button id="btnExportHorizontal" class="secundario" title="El lienzo del proyecto tal cual">MP4 horizontal</button>
+          <button id="btnExportCancelar" class="secundario oculto">Cancelar</button>
         </div>
-        <div id="canvas916Wrap">
-          <canvas id="canvas916" width="360" height="640"></canvas>
-          <div id="divisores916"></div>
-          <div id="celdasLibres916"></div>
+        <progress id="exportProgreso" class="oculto" max="1" value="0"></progress>
+        <div id="exportEstado">El video sale con la mezcla de todas las pistas de audio. El visor todavía reproduce una sola.</div>
+      </div>
+
+      <div class="panelLateral">
+        <h2>Transcripción y cortes</h2>
+        <div id="resumenCortes" class="oculto">
+          <div><b id="rTotal">0</b>bloques</div>
+          <div><b id="rCortados">0</b>cortados</div>
+          <div><b id="rDuracion">0s</b>resultante</div>
+          <div><b id="rPct">0%</b>eliminado</div>
         </div>
-        <span id="hintLayout916">El numero y el color de cada celda coinciden con el recuadro correspondiente en el visor de arriba. Arrastra la linea entre 2 celdas para achicar/agrandar; los presets de arriba reordenan todo de una. Con "Libre" podes arrastrar cada celda a cualquier posicion y redimensionarla desde sus 4 esquinas, sin afectar a las demas.</span>
+        <div id="transcripcion"></div>
+        <div class="filaBotones" id="filaSugerencias">
+          <span id="sugerenciasTexto">Sin sugerencias</span>
+          <button id="btnAceptarSugerencias" class="secundario" disabled>Aceptar todas</button>
+          <button id="btnDescartarSugerencias" class="secundario" disabled>Descartar</button>
+          <button id="btnAplicarCortes" class="secundario" disabled title="Saca de la línea de tiempo lo marcado como cortado (todas las pistas sin candado). Un Ctrl+Z lo devuelve.">Aplicar cortes a la línea</button>
+        </div>
+        <div class="filaBotones" id="botonesExport">
+          <button id="btnExportJson" class="secundario">JSON</button>
+          <button id="btnExportSrt" class="secundario">SRT</button>
+          <button id="btnExportTranscripcionFinal" class="secundario" title="Texto con marca de tiempo, solo lo que queda en el video final">Texto final</button>
+          <button id="btnExportTranscripcionCompleta" class="secundario" title="Texto con marca de tiempo, incluye lo marcado para cortar">Texto completo</button>
+          <button id="btnExportTranscripcionPlana" class="secundario" title="Solo el texto, corrido, sin marcas de tiempo ni encabezado — para copiar y pegar">Solo texto</button>
+        </div>
+      </div>
+
+      <div class="panelLateral">
+        <h2>Análisis con IA</h2>
+        <div class="campo">
+          <label for="selectKeyIA">Key de OpenRouter</label>
+          <select id="selectKeyIA"></select>
+        </div>
+        <div class="campo">
+          <label for="inputModeloIA">Modelo</label>
+          <input type="text" id="inputModeloIA" value="anthropic/claude-sonnet-4.5">
+        </div>
+        <div class="campo">
+          <label for="inputInstruccionesIA">Instrucciones extra (opcional)</label>
+          <textarea id="inputInstruccionesIA" placeholder="Ej: no toques los chistes, sacá solo muletillas."></textarea>
+        </div>
+        <button id="btnAnalizarIA" class="secundario" disabled>Buscar muletillas</button>
+        <div id="estadoIA"></div>
+      </div>
+
+      <div class="panelLateral">
+        <h2>API Keys</h2>
+        <div class="campo">
+          <label for="inputNombreKey">Nombre</label>
+          <input type="text" id="inputNombreKey" placeholder="Mi key de OpenRouter">
+        </div>
+        <div class="campo">
+          <label for="inputValorKey">Valor</label>
+          <input type="text" id="inputValorKey" placeholder="sk-or-...">
+        </div>
+        <button id="btnGuardarKey" class="secundario">Guardar key</button>
+        <div id="listaKeys"></div>
+      </div>
+
+      <div class="panelLateral">
+        <h2>Transcribir en la nube</h2>
+        <p class="ayuda" id="estadoKeyNvidia">Revisando…</p>
+        <div class="campo">
+          <label for="inputNubeFunctionId">function-id de NVIDIA</label>
+          <input type="text" id="inputNubeFunctionId" placeholder="solo si el endpoint lo pide">
+        </div>
+        <div class="campo">
+          <label for="inputNubeIdioma">Idioma</label>
+          <input type="text" id="inputNubeIdioma" placeholder="es-US">
+        </div>
+        <div class="campo">
+          <label for="inputNubePalabras">Palabras a reforzar</label>
+          <input type="text" id="inputNubePalabras" placeholder="cachai, pololo, weón, nombres propios…">
+        </div>
+        <p class="ayuda">
+          Separadas por coma. Suben la probabilidad de que el modelo las escriba bien:
+          es la forma de meterle modismos chilenos y nombres propios.
+        </p>
+        <button id="btnGuardarNube" class="secundario">Guardar</button>
+      </div>
+    </div>
+
+  <div id="divH" class="divisor horiz" title="Arrastra para cambiar el alto de la linea de tiempo"></div>
+
+  <div id="zonaTimeline">
+    <div id="tlBarra">
+      <button class="herramienta activa" data-tool="seleccion" title="Seleccionar y arrastrar (V)">▶</button>
+      <button class="herramienta" data-tool="cuchilla" title="Cortar: parte el clip en dos (C)">✂</button>
+      <button class="herramienta" data-tool="ripple" title="Ripple: alarga/acorta y corre lo de atrás (B)">⇥</button>
+      <button class="herramienta" data-tool="roll" title="Roll: mueve el corte entre dos clips (N)">⇹</button>
+      <button class="herramienta" data-tool="slip" title="Slip: cambia qué parte del material se ve (Y)">↔</button>
+      <button class="herramienta" data-tool="slide" title="Slide: mueve el clip, los vecinos absorben (U)">⇄</button>
+      <span class="sep"></span>
+      <button id="btnDeshacer" class="secundario" disabled title="Deshacer (Ctrl+Z)">↶</button>
+      <button id="btnRehacer" class="secundario" disabled title="Rehacer (Ctrl+Shift+Z)">↷</button>
+      <span class="sep"></span>
+      <button id="btnZoomMenos" class="secundario" title="Alejar">−</button>
+      <span id="tlZoomTexto">100%</span>
+      <button id="btnZoomMas" class="secundario" title="Acercar">+</button>
+      <button id="btnZoomAjustar" class="secundario" title="Ajustar todo">Ajustar</button>
+      <span class="sep"></span>
+      <label title="Los bordes se pegan a clips y al cabezal">
+        <input type="checkbox" id="chkIman" checked> Imán
+      </label>
+      <span class="espacio"></span>
+      <span id="tlInfo"></span>
+      <!-- "+V" y "+A" se fueron: las pistas vacias se podan, asi que una
+           pista creada a mano desaparecia enseguida. Ahora aparecen solas
+           al poner material y al soltar un clip en la franja "+ pista". -->
+    </div>
+
+    <div id="tlCuerpo">
+      <div id="tlEncabezados"></div>
+      <div id="tlScroll">
+        <div id="tlLienzo">
+          <div id="tlRegla"></div>
+          <div id="tlPistas"></div>
+          <div id="tlCabezal"></div>
+          <div id="tlDesfase" class="oculto"></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="panelWrapGUI" data-panel-id="resumen" data-panel-titulo="Resumen de cortes">
-  <div id="resumenCortes" style="display:none;">
-    <div><b id="rTotal">0</b>bloques</div>
-    <div><b id="rCortados">0</b>marcados para cortar</div>
-    <div><b id="rDuracion">0s</b>metraje resultante</div>
-    <div><b id="rPct">0%</b>eliminado</div>
-  </div>
-  </div>
+</div>
 
-  <div class="seccion" data-panel-id="transcripcion" data-panel-titulo="Transcripcion">
-    <div id="transcripcionHeader">
-      <h2 style="font-size:16px;">Transcripcion</h2>
-      <button id="btnColapsarTranscripcion" class="secundario">Contraer</button>
-    </div>
-    <div id="transcripcion"></div>
-  </div>
-
-
-  <div class="panelWrapGUI" data-panel-id="export" data-panel-titulo="Exportar">
-  <div id="botonesExport" style="display:none;">
-    <button id="btnExportJson" class="secundario">Guardar cortes (JSON)</button>
-    <button id="btnExportSrt" class="secundario">Exportar subtitulos (SRT)</button>
-    <button id="btnExportVideo">Exportar video (MP4)</button>
-    <button id="btnCancelarExportVideo" class="secundario" style="display:none;">Cancelar</button>
-    <div id="exportVideoEstado" style="font-size:12px; color:#9ca3af; margin-top:6px;"></div>
-    <div id="exportVideoBarraWrap" style="display:none; background:#161a22; border-radius:4px; height:8px; margin-top:4px; overflow:hidden;">
-      <div id="exportVideoBarra" style="background:#2563eb; height:100%; width:0%;"></div>
-    </div>
-  </div>
-  </div>
-
-  <div id="panelIA" class="seccion" data-panel-id="ia" data-panel-titulo="Analisis con IA">
-    <h2 style="font-size:16px;">Analisis con IA <span style="color:#6b7280;font-weight:normal;font-size:13px;">opcional</span></h2>
-    <p style="color:#6b7280;font-size:13px;">El LLM revisa la transcripcion y sugiere cortes adicionales: frases repetidas, muletillas, tangentes. Aparecen en <span style="color:#eab308;">amarillo</span> en el editor - clic para aceptarlas.</p>
-    <div class="filaIA">
-      <div>
-        <label>Backend</label>
-        <select id="selectorBackendIA">
-          <option value="openrouter">OpenRouter (nube)</option>
-        </select>
-      </div>
-      <div>
-        <label>Modelo</label>
-        <input type="text" id="inputModeloIA" value="anthropic/claude-sonnet-4-5" style="width:260px;background:#1a1d24;border:1px solid #374151;color:#e5e7eb;padding:8px 10px;border-radius:6px;font-size:13px;">
-      </div>
-      <div>
-        <label>API key (OpenRouter)</label>
-        <select id="selectorKeyIA"></select>
-      </div>
-    </div>
-    <details>
-      <summary>Instrucciones adicionales (opcional)</summary>
-      <textarea id="inputInstruccionesIA" placeholder="Ej: se mas estricto con las tangentes sobre otros videos"></textarea>
-    </details>
-    <details>
-      <summary>System prompt (avanzado)</summary>
-      <textarea id="inputSystemPromptIA" placeholder="Dejar vacio para usar el prompt por defecto."></textarea>
-    </details>
-    <button id="btnAnalizarIA">Analizar</button>
-    <span id="estadoIA"></span>
-  </div>
-
-  <div class="seccion" data-panel-id="keys" data-panel-titulo="API Keys">
-    <h2 style="font-size:16px;">API Keys</h2>
-    <p style="color:#6b7280;font-size:13px;">El proveedor se detecta automatico por el formato de la key.</p>
-    <input type="text" id="inputNombreKey" placeholder="Nombre (opcional)" style="width:160px;">
-    <input type="text" id="inputValorKey" placeholder="Pega la key aca" style="width:340px;">
-    <button id="btnGuardarKey">Guardar key</button>
-    <div id="listaKeys"></div>
-  </div>
-
-  </div>
-  <!-- cierre #panelesContainer -->
-
-  </div>
-
-  <script src="renderer.js"></script>
+<!-- El MISMO modulo del modelo que usa el proceso principal (envoltorio
+     UMD: aca queda como window.Montaje). El visor lo necesita para
+     resolver que se ve en cada instante sin preguntarle al main por cada
+     cuadro; usando el mismo archivo, la cuenta no puede divergir. -->
+<script src="../shared/montaje.js"></script>
+<!-- Las tres piezas del 9:16, los MISMOS archivos que usa el proceso
+     principal: el recorte que se ve en el preview y el que va a pedir la
+     exportacion salen de aca, asi no pueden separarse. -->
+<script src="../shared/lienzo.js"></script>
+<script src="../shared/geometria916.js"></script>
+<script src="../shared/layout916.js"></script>
+<!-- EL PLAN DE DIBUJO. Lo carga tambien el proceso principal para
+     exportar: preview y export ejecutan el MISMO plan, asi que no pueden
+     mostrar cosas distintas. Va ultimo porque usa a los cuatro de arriba. -->
+<script src="../shared/composicion.js"></script>
+<!-- MEDIABUNNY (08/08/2026) — el codificador de la exportacion.
+     Se carga con un <script> normal y no con import: el bundle .cjs
+     termina en `var Mediabunny = (() => {...})()`, o sea que deja el
+     global igual que los modulos de arriba. No trae ningun require
+     externo, asi que no hace falta bundler ni cambiar la seguridad de la
+     ventana (la ventana va con contextIsolation y sin nodeIntegration, y
+     asi se queda).
+     Medido en Chromium el 08/08/2026: avc/hevc/vp8/vp9/av1 y aac/opus
+     codifican; mp3 y flac no. La app igual pregunta con canEncode() antes
+     de exportar, porque esto depende del build de Chromium que traiga
+     Electron. -->
+<script src="../../node_modules/mediabunny/dist/bundles/mediabunny.min.cjs"></script>
+<!-- Van DESPUES de mediabunny: cuadros.js la usa al cargarse el modulo. -->
+<script src="../shared/guionExport.js"></script>
+<script src="../shared/mezclaAudio.js"></script>
+<script src="cuadros.js"></script>
+<script src="gestosTl.js"></script>
+<script src="previewTl.js"></script>
+<script src="exportVideo.js"></script>
+<script src="renderer.js"></script>
 </body>
 </html>
