@@ -53,6 +53,11 @@ td,th{border-bottom:1px solid var(--grid);padding:4px 6px;text-align:left}
 <h1>¿Cuántos químicos se lanzan para sembrar nubes?</h1>
 <p class="sub">Datos reunidos por 4 agentes de investigación (octubre 2026). Línea continua = medido · línea punteada = estimado. Casi ningún país publica totales anuales.</p>
 
+<h2>Total mundial conocido de yoduro de plata (toneladas por año)</h2>
+<p class="sub">Suma de EE.UU. + China + Francia + Australia. Antes de 2002 solo hay datos de EE.UU., así que esos años están subestimados.</p>
+<div class="legend" id="lg0"></div>
+<div class="chart" id="c0"></div>
+
 <h2>1. Yoduro de plata (kg por año)</h2>
 <p class="sub">El agente principal para nubes frías, nieve y antigranizo.</p>
 <div class="legend" id="lg1"></div>
@@ -80,6 +85,9 @@ const AGI=[
  {name:"China",c:"--s2",pts:[[2007,1550,"e"],[2015,1800,"e"]]},
  {name:"Francia",c:"--s3",pts:[[2009,740,"e"]]},
  {name:"Australia (Snowy)",c:"--s4",pts:[[2013,45,"m"],[2019,59,"m"],[2020,39,"m"],[2021,23,"m"],[2022,19,"m"],[2023,14,"m"]]}
+];
+const TOT=[
+ {name:"Total conocido",c:"--s1",pts:[[1972,1.06,"m"],[1978,1.49,"m"],[1980,0.92,"m"],[1985,0.29,"m"],[1988,0.30,"m"],[2004,2.05,"e"],[2009,2.84,"e"],[2015,3.19,"e"],[2020,3.28,"e"],[2025,3.35,"e"]]}
 ];
 const SAL=[
  {name:"Emiratos",c:"--s1",pts:[[2014,4.1,"e"],[2016,3.9,"e"],[2017,5.0,"e"],[2018,4.0,"e"],[2019,5.4,"e"],[2020,8.8,"e"],[2021,6.6,"e"],[2022,6.8,"e"],[2023,6.6,"e"],[2024,6.8,"e"]]},
@@ -113,6 +121,7 @@ function draw(id,lg,data,x0,x1,ymax,unit,step){
   });
   document.getElementById(lg).innerHTML=data.map(d=>`<span><i class="sw" style="border-color:var(${d.c})"></i>${d.name}</span>`).join("")+`<span><i class="sw d" style="border-color:var(--muted)"></i>estimado</span>`;
 }
+draw("c0","lg0",TOT,1970,2027,4,"t",1);
 draw("c1","lg1",AGI,1970,2027,2000,"kg",500);
 draw("c2","lg2",SAL,2013,2026,20,"t",5);
 let t="<table><tr><th>Región</th><th>Químico</th><th>Año</th><th>Cantidad</th><th>Tipo</th></tr>";
