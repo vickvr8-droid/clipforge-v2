@@ -1,0 +1,20 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.vick.stickerforge'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'com.vick.stickerforge'
+        minSdk 28
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+    signingConfigs {
+        app { storeFile file('stickerforge.jks'); storePassword 'stickerforge'; keyAlias 'sf'; keyPassword 'stickerforge' }
+    }
+    buildTypes {
+        debug { signingConfig signingConfigs.app }
+        release { signingConfig signingConfigs.app; minifyEnabled false }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}

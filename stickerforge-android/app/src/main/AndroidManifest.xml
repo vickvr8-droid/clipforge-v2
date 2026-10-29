@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <queries>
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
+    </queries>
+    <application android:label="StickerForge" android:largeHeap="true"
+        android:icon="@android:drawable/star_big_on"
+        android:theme="@android:style/Theme.DeviceDefault">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity android:name=".PackActivity" />
+        <activity android:name=".EditorActivity" android:windowSoftInputMode="adjustResize" />
+        <provider android:name=".StickerContentProvider"
+            android:authorities="com.vick.stickerforge.stickercontentprovider"
+            android:enabled="true" android:exported="true"
+            android:readPermission="com.whatsapp.sticker.READ" />
+    </application>
+</manifest>
