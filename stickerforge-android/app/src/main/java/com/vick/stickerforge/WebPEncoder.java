@@ -55,13 +55,15 @@ public class WebPEncoder {
         body.write(0);
 
         for (Bitmap f : frames) {
-            byte[] webp = compress(f, quality);
+            if (f.getWidth() != w || f.getHeight() != h) throw new IllegalArgumentException("Cuadros de tamaño distinto");
+            byte[] webp = compress(f, Math.min(quality, 95));
+            boolean hasImage = false;
             ByteArrayOutputStream payload = new ByteArrayOutputStream();
             le24(payload, 0);
             le24(payload, 0);
             le24(payload, w - 1);
             le24(payload, h - 1);
-            le24(payload, frameMs);
+            le24(payload, Math.max(8, Math.min(frameMs, 0xFFFFFF)));
             payload.write(0x02); // sin mezcla, sin disposición
             int off = 12;
             while (off + 8 <= webp.length) {
@@ -69,11 +71,14 @@ public class WebPEncoder {
                 int size = (webp[off + 4] & 0xff) | (webp[off + 5] & 0xff) << 8
                         | (webp[off + 6] & 0xff) << 16 | (webp[off + 7] & 0xff) << 24;
                 int len = 8 + size + (size & 1);
+                if (size < 0 || off + len > webp.length) throw new IllegalStateException("WebP truncado");
                 if (tag.equals("ALPH") || tag.equals("VP8 ") || tag.equals("VP8L")) {
-                    payload.write(webp, off, Math.min(len, webp.length - off));
+                    payload.write(webp, off, len);
+                    if (!tag.equals("ALPH")) hasImage = true;
                 }
                 off += len;
             }
+            if (!hasImage) throw new IllegalStateException("Cuadro sin imagen");
             writeTag(body, "ANMF");
             le32(body, payload.size());
             body.write(payload.toByteArray(), 0, payload.size());

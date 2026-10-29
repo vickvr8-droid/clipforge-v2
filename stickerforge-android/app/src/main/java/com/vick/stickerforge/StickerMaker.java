@@ -3,12 +3,8 @@ package com.vick.stickerforge;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.ImageDecoder;
 import android.graphics.Movie;
-import android.graphics.Paint;
-import android.graphics.RectF;
-import android.graphics.Typeface;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 
@@ -100,57 +96,21 @@ public class StickerMaker {
         public void release() { }
     }
 
-    /** Coloca el cuadro en un lienzo transparente de 512x512 y dibuja el texto. */
-    public static Bitmap compose(Bitmap src, boolean fill, String text) {
-        Bitmap out = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888);
-        Canvas cv = new Canvas(out);
-        if (src != null) {
-            float s = fill ? Math.max((float) SIZE / src.getWidth(), (float) SIZE / src.getHeight())
-                    : Math.min((float) SIZE / src.getWidth(), (float) SIZE / src.getHeight());
-            float w = src.getWidth() * s, h = src.getHeight() * s;
-            RectF dst = new RectF((SIZE - w) / 2, (SIZE - h) / 2, (SIZE + w) / 2, (SIZE + h) / 2);
-            cv.drawBitmap(src, null, dst, new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG));
-        }
-        if (text != null && !text.trim().isEmpty()) drawText(cv, text.trim());
-        return out;
-    }
-
-    private static void drawText(Canvas cv, String text) {
-        Paint fillP = new Paint(Paint.ANTI_ALIAS_FLAG);
-        fillP.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
-        fillP.setTextAlign(Paint.Align.CENTER);
-        float size = 80;
-        fillP.setTextSize(size);
-        while (fillP.measureText(text) > SIZE - 40 && size > 24) {
-            size -= 4;
-            fillP.setTextSize(size);
-        }
-        Paint stroke = new Paint(fillP);
-        stroke.setStyle(Paint.Style.STROKE);
-        stroke.setStrokeWidth(size / 6);
-        stroke.setStrokeJoin(Paint.Join.ROUND);
-        stroke.setColor(Color.BLACK);
-        fillP.setColor(Color.WHITE);
-        float y = SIZE - 30;
-        cv.drawText(text, SIZE / 2f, y, stroke);
-        cv.drawText(text, SIZE / 2f, y, fillP);
-    }
-
     public interface Progress {
         void update(String msg);
     }
 
     /** Crea un sticker animado; baja calidad y luego fps hasta caber en 500 KB. */
     public static byte[] makeAnimated(FrameSource src, long startMs, long lenMs, int fps,
-                                      boolean fill, String text, Progress p) {
-        int frameMs = 1000 / fps;
+                                      EditState st, Progress p) {
+        int frameMs = Math.max(8, 1000 / fps);
         int count = Math.max(2, (int) (lenMs / frameMs));
         List<Bitmap> frames = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             p.update("Extrayendo cuadro " + (i + 1) + "/" + count);
             Bitmap raw = src.frameAt(startMs + (long) i * frameMs);
             if (raw == null) continue;
-            frames.add(compose(raw, fill, text));
+            frames.add(st.render(raw));
             if (!(src instanceof ImageSource)) raw.recycle();
         }
         if (frames.size() < 2) return null;
