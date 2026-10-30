@@ -68,7 +68,15 @@ public class StickerCanvasView extends View {
         c.save();
         float s = scale();
         c.scale(s, s);
-        if (rendered != null) c.drawBitmap(rendered, 0, 0, new Paint(Paint.FILTER_BITMAP_FLAG));
+        if (rendered != null) {
+            if (state.anim != EditState.Anim.NONE) {
+                float t = (System.currentTimeMillis() % 1500) / 1500f;
+                c.drawBitmap(rendered, state.animMatrix(t), new Paint(Paint.FILTER_BITMAP_FLAG));
+                postInvalidateOnAnimation();
+            } else {
+                c.drawBitmap(rendered, 0, 0, new Paint(Paint.FILTER_BITMAP_FLAG));
+            }
+        }
         if (selected != null && state.texts.contains(selected)) {
             Path p = new Path();
             p.addRect(selected.bounds(), Path.Direction.CW);

@@ -42,6 +42,8 @@ public class EditorActivity extends Activity {
     private TextView timeLbl;
     private RadioGroup fpsGroup;
     private long durMs;
+    private boolean stillInAnimated;
+    private int animLenMs = 1500;
     private boolean trimmed;
     private int fpsChoice = 10;
     private long trimStart, trimLen;
@@ -80,11 +82,7 @@ public class EditorActivity extends Activity {
             return;
         }
         durMs = src.durationMs();
-        if (pack.animated && durMs <= 0) {
-            Toast.makeText(this, "Este paquete es animado: elige un video o GIF", Toast.LENGTH_LONG).show();
-            finish();
-            return;
-        }
+        stillInAnimated = pack.animated && durMs <= 0;
 
         int pad = Ui.dp(this, 12);
         LinearLayout l = new LinearLayout(this);
@@ -111,6 +109,8 @@ public class EditorActivity extends Activity {
         tab(tabs, "🔤 Texto", this::showText);
         tab(tabs, "⬜ Borde", this::showBorder);
         if (durMs > 0 && !trimmed) tab(tabs, "⏱ Tiempo", this::showTime);
+        if (pack.animated) tab(tabs, "✨ Animación", this::showAnim);
+        if (stillInAnimated) canvas.state.anim = EditState.Anim.PULSE;
 
         // Controles de tiempo se crean una vez para conservar sus valores
         if (durMs > 0 && !trimmed) buildTimeControls();
@@ -292,6 +292,43 @@ public class EditorActivity extends Activity {
         colorRow("Color del borde", c -> { canvas.state.borderColor = c; canvas.refresh(); });
     }
 
+    private void showAnim() {
+        panel.removeAllViews();
+        if (stillInAnimated) {
+            TextView t = Ui.label(this, "Este paquete es animado: la imagen necesita un movimiento.");
+            t.setTextSize(12);
+            panel.addView(t);
+        }
+        LinearLayout r = row();
+        if (!stillInAnimated) add(r, "Ninguna", () -> setAnim(EditState.Anim.NONE));
+        add(r, "💓 Latido", () -> setAnim(EditState.Anim.PULSE));
+        add(r, "🫨 Temblor", () -> setAnim(EditState.Anim.SHAKE));
+        add(r, "🔄 Girar", () -> setAnim(EditState.Anim.SPIN));
+        add(r, "⬆️ Rebote", () -> setAnim(EditState.Anim.BOUNCE));
+        if (stillInAnimated) {
+            TextView lbl = Ui.label(this, "");
+            panel.addView(lbl);
+            SeekBar sb = new SeekBar(this);
+            sb.setMax(30); // 0.5 a 3.5 s
+            sb.setProgress((animLenMs - 500) / 100);
+            lbl.setText(String.format(Locale.US, "Duración del ciclo: %.1f s", animLenMs / 1000f));
+            sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                public void onProgressChanged(SeekBar s, int p, boolean u) {
+                    animLenMs = 500 + p * 100;
+                    lbl.setText(String.format(Locale.US, "Duración del ciclo: %.1f s", animLenMs / 1000f));
+                }
+                public void onStartTrackingTouch(SeekBar s) { }
+                public void onStopTrackingTouch(SeekBar s) { }
+            });
+            panel.addView(sb);
+        }
+    }
+
+    private void setAnim(EditState.Anim a) {
+        canvas.state.anim = a;
+        canvas.refresh();
+    }
+
     private void buildTimeControls() {
         timeLbl = Ui.label(this, "");
         start = new SeekBar(this);
@@ -377,8 +414,8 @@ public class EditorActivity extends Activity {
         pd.show();
         EditState st = canvas.state.copy();
         long s0 = startMs();
-        long len = Math.max(500, Math.min(lenMs(), durMs - s0));
-        int fps = fpsGroup != null ? fpsGroup.getCheckedRadioButtonId() - 1000 : fpsChoice;
+        long len = stillInAnimated ? animLenMs : Math.max(500, Math.min(lenMs(), durMs - s0));
+        int fps = stillInAnimated ? 15 : fpsGroup != null ? fpsGroup.getCheckedRadioButtonId() - 1000 : fpsChoice;
         String emo = cleanEmojis(emoji.getText().toString());
         Bitmap still = canvas.frame;
         new Thread(() -> {

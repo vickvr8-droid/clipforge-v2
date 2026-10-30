@@ -76,8 +76,8 @@ public class ShareActivity extends Activity {
         List<PackStore.Pack> all = PackStore.load(this);
         List<PackStore.Pack> ok = new ArrayList<>();
         for (PackStore.Pack p : all) {
-            // Las imágenes fijas solo van a paquetes estáticos; videos y GIF a cualquiera
-            if ((moving || !p.animated) && p.stickers.size() < 30) ok.add(p);
+            // En paquetes animados las imágenes fijas se animan (latido, temblor...)
+            if (p.stickers.size() < 30) ok.add(p);
         }
         List<String> names = new ArrayList<>();
         for (PackStore.Pack p : ok) names.add((p.animated ? "🎞 " : "🖼 ") + p.name + " (" + p.stickers.size() + ")");

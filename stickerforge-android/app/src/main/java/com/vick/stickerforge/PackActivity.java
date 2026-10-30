@@ -120,7 +120,7 @@ public class PackActivity extends Activity {
         i.addCategory(Intent.CATEGORY_OPENABLE);
         if (pack.animated) {
             i.setType("*/*");
-            i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"video/*", "image/gif"});
+            i.putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"image/*", "video/*"});
         } else {
             i.setType("image/*");
         }

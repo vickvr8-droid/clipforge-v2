@@ -149,12 +149,25 @@ public class StickerMaker {
         int frameMs = Math.max(8, 1000 / fps);
         int count = Math.max(2, (int) (lenMs / frameMs));
         List<Bitmap> frames = new ArrayList<>();
+        boolean still = src.durationMs() <= 0;
+        Bitmap base = still ? st.render(src.frameAt(0)) : null; // imagen fija: se dibuja una vez
         for (int i = 0; i < count; i++) {
-            p.update("Extrayendo cuadro " + (i + 1) + "/" + count);
+            p.update((still ? "Animando cuadro " : "Extrayendo cuadro ") + (i + 1) + "/" + count);
+            float t = i / (float) count;
+            if (still) {
+                frames.add(st.applyAnim(base, t));
+                continue;
+            }
             Bitmap raw = src.frameAt(startMs + (long) i * frameMs);
             if (raw == null) continue;
-            frames.add(st.render(raw));
-            if (!(src instanceof ImageSource)) raw.recycle();
+            Bitmap r = st.render(raw);
+            raw.recycle();
+            if (st.anim != EditState.Anim.NONE) {
+                Bitmap a = st.applyAnim(r, t);
+                r.recycle();
+                r = a;
+            }
+            frames.add(r);
         }
         if (frames.size() < 2) return null;
         while (frames.size() > 2 && frames.size() * frameMs > 10000) frames.remove(frames.size() - 1);

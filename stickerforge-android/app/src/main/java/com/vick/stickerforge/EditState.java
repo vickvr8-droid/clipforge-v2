@@ -20,6 +20,8 @@ public class EditState {
 
     public enum Shape { NONE, ROUNDED, CIRCLE, HEART, STAR, FREE }
 
+    public enum Anim { NONE, PULSE, SHAKE, SPIN, BOUNCE }
+
     public static class TextLayer {
         public String text;
         public int color = Color.WHITE, strokeColor = Color.BLACK;
@@ -75,6 +77,42 @@ public class EditState {
     public int border = 0;
     public int borderColor = Color.WHITE;
     public List<TextLayer> texts = new ArrayList<>();
+    public Anim anim = Anim.NONE;
+
+    /** Movimiento del sticker completo en el instante t (0..1 del ciclo). */
+    public Matrix animMatrix(float t) {
+        Matrix m = new Matrix();
+        double a = 2 * Math.PI * t;
+        switch (anim) {
+            case PULSE: {
+                float s = 0.9f + 0.1f * (float) (0.5 + 0.5 * Math.sin(a));
+                m.postScale(s, s, S / 2f, S / 2f);
+                break;
+            }
+            case SHAKE:
+                m.postScale(0.92f, 0.92f, S / 2f, S / 2f);
+                m.postRotate((float) (8 * Math.sin(2 * a)), S / 2f, S / 2f);
+                break;
+            case SPIN:
+                m.postScale(0.85f, 0.85f, S / 2f, S / 2f);
+                m.postRotate(360 * t, S / 2f, S / 2f);
+                break;
+            case BOUNCE:
+                m.postScale(0.88f, 0.88f, S / 2f, S / 2f);
+                m.postTranslate(0, (float) (24 - 48 * Math.abs(Math.sin(a))));
+                break;
+            default:
+                break;
+        }
+        return m;
+    }
+
+    /** Aplica la animación a un sticker ya dibujado. */
+    public Bitmap applyAnim(Bitmap rendered, float t) {
+        Bitmap out = Bitmap.createBitmap(S, S, Bitmap.Config.ARGB_8888);
+        new Canvas(out).drawBitmap(rendered, animMatrix(t), new Paint(Paint.FILTER_BITMAP_FLAG | Paint.ANTI_ALIAS_FLAG));
+        return out;
+    }
 
     public EditState copy() {
         EditState e = new EditState();
@@ -85,6 +123,7 @@ public class EditState {
         e.freePath = freePath == null ? null : new Path(freePath);
         e.border = border;
         e.borderColor = borderColor;
+        e.anim = anim;
         for (TextLayer t : texts) e.texts.add(t.copy());
         return e;
     }

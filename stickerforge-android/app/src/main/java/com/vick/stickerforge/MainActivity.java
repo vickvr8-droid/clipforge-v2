@@ -10,6 +10,7 @@ import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
@@ -79,11 +80,15 @@ public class MainActivity extends Activity {
         author.setHint("Autor");
         author.setText(getSharedPreferences("p", 0).getString("author", ""));
         CheckBox anim = new CheckBox(this);
-        anim.setText("Paquete animado (videos y GIF)");
-        anim.setChecked(true);
+        anim.setText("Paquete animado (videos, GIF e imágenes con movimiento)");
+        anim.setChecked(false);
+        TextView note = new TextView(this);
+        note.setText("WhatsApp no deja mezclar: un paquete es todo fijo o todo animado.");
+        note.setTextSize(12);
         l.addView(name);
         l.addView(author);
         l.addView(anim);
+        l.addView(note);
         new AlertDialog.Builder(this).setTitle("Nuevo paquete").setView(l)
                 .setPositiveButton("Crear", (d, w) -> {
                     String n = name.getText().toString().trim();

@@ -48,4 +48,39 @@ public class StickerMakerTest {
         TestUtil.write("anim_long_20fps.webp", w);
         assertTrue(w.length <= WebPEncoder.MAX_ANIMATED);
     }
+
+    /** Imagen fija dentro de un paquete animado: se anima con cada efecto. */
+    static class FakeImage implements StickerMaker.FrameSource {
+        final Bitmap b = new TestUtil.FakeVideo(800, 600, 0).frameAt(3);
+        public long durationMs() { return 0; }
+        public Bitmap frameAt(long ms) { return b; }
+        public void release() { }
+    }
+
+    @Test
+    public void stillImageBecomesAnimated() throws Exception {
+        for (EditState.Anim a : new EditState.Anim[]{EditState.Anim.PULSE, EditState.Anim.SHAKE,
+                EditState.Anim.SPIN, EditState.Anim.BOUNCE}) {
+            EditState st = new EditState();
+            st.baseW = 800;
+            st.baseH = 600;
+            st.fit(false);
+            st.shape = EditState.Shape.CIRCLE;
+            st.anim = a;
+            byte[] w = StickerMaker.makeAnimated(new FakeImage(), 0, 1500, 15, st, m -> { });
+            assertNotNull(a.name(), w);
+            assertTrue(a.name() + " pesa " + w.length, w.length <= WebPEncoder.MAX_ANIMATED);
+            TestUtil.write("image_" + a.name().toLowerCase() + ".webp", w);
+        }
+    }
+
+    @Test
+    public void animationFramesDiffer() {
+        EditState st = new EditState();
+        st.anim = EditState.Anim.BOUNCE;
+        Bitmap base = Bitmap.createBitmap(512, 512, Bitmap.Config.ARGB_8888);
+        base.eraseColor(android.graphics.Color.RED);
+        Bitmap f0 = st.applyAnim(base, 0f), f1 = st.applyAnim(base, 0.25f);
+        assertFalse(f0.sameAs(f1));
+    }
 }
