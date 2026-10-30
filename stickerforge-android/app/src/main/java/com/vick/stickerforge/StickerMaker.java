@@ -23,12 +23,22 @@ public class StickerMaker {
     }
 
     public static FrameSource open(Context c, Uri uri) throws Exception {
+        return open(c, uri, 1024);
+    }
+
+    public static boolean isVideo(Context c, Uri uri) {
+        String t = c.getContentResolver().getType(uri);
+        if (t == null || "file".equals(uri.getScheme())) return String.valueOf(uri.getPath()).toLowerCase().endsWith(".mp4");
+        return t.startsWith("video/");
+    }
+
+    public static FrameSource open(Context c, Uri uri, int maxSide) throws Exception {
         String type = c.getContentResolver().getType(uri);
         if (type == null || "file".equals(uri.getScheme())) {
             String p = String.valueOf(uri.getPath()).toLowerCase();
             type = p.endsWith(".mp4") ? "video/mp4" : p.endsWith(".gif") ? "image/gif" : "";
         }
-        if (type.startsWith("video/")) return new VideoSource(c, uri);
+        if (type.startsWith("video/")) return new VideoSource(c, uri, maxSide);
         if (type.equals("image/gif")) return new GifSource(c, uri);
         return new ImageSource(c, uri);
     }
@@ -36,8 +46,10 @@ public class StickerMaker {
     static class VideoSource implements FrameSource {
         final MediaMetadataRetriever r = new MediaMetadataRetriever();
         final long dur;
+        final int maxSide;
 
-        VideoSource(Context c, Uri uri) {
+        VideoSource(Context c, Uri uri, int maxSide) {
+            this.maxSide = maxSide;
             r.setDataSource(c, uri);
             String d = r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION);
             dur = d == null ? 0 : Long.parseLong(d);
@@ -47,7 +59,7 @@ public class StickerMaker {
 
         public Bitmap frameAt(long ms) {
             Bitmap b = r.getScaledFrameAtTime(Math.min(ms, Math.max(0, dur - 1)) * 1000,
-                    MediaMetadataRetriever.OPTION_CLOSEST, 1024, 1024);
+                    MediaMetadataRetriever.OPTION_CLOSEST, maxSide, maxSide);
             if (b == null) b = r.getFrameAtTime(ms * 1000, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
             return b;
         }
@@ -99,6 +111,34 @@ public class StickerMaker {
         public void release() { }
     }
 
+    /** Recorta cada cuadro a una zona (coordenadas 0..1) sin perder resolución. */
+    public static class CroppedSource implements FrameSource {
+        final FrameSource src;
+        final float l, t, r, b;
+
+        public CroppedSource(FrameSource src, float[] c) {
+            this.src = src;
+            l = c[0]; t = c[1]; r = c[2]; b = c[3];
+        }
+
+        public long durationMs() { return src.durationMs(); }
+
+        public Bitmap frameAt(long ms) {
+            Bitmap f = src.frameAt(ms);
+            if (f == null) return null;
+            int x = Math.round(l * f.getWidth()), y = Math.round(t * f.getHeight());
+            int w = Math.max(1, Math.min(f.getWidth() - x, Math.round((r - l) * f.getWidth())));
+            int h = Math.max(1, Math.min(f.getHeight() - y, Math.round((b - t) * f.getHeight())));
+            Bitmap c = Bitmap.createBitmap(f, x, y, w, h);
+            float s = 1024f / Math.max(w, h);
+            if (s < 1) c = Bitmap.createScaledBitmap(c, Math.round(w * s), Math.round(h * s), true);
+            if (c != f) f.recycle();
+            return c;
+        }
+
+        public void release() { src.release(); }
+    }
+
     public interface Progress {
         void update(String msg);
     }
@@ -117,12 +157,22 @@ public class StickerMaker {
             if (!(src instanceof ImageSource)) raw.recycle();
         }
         if (frames.size() < 2) return null;
-        int[] qualities = {75, 60, 45, 30, 20};
         while (true) {
-            for (int q : qualities) {
-                p.update("Comprimiendo (" + frames.size() + " cuadros, calidad " + q + ")");
-                byte[] out = WebPEncoder.encodeAnimated(frames, frameMs, q, WebPEncoder.MAX_ANIMATED);
-                if (out != null) return out;
+            // Busca la mayor calidad que entre en 500 KB
+            p.update("Comprimiendo (" + frames.size() + " cuadros, calidad 92)");
+            byte[] best = WebPEncoder.encodeAnimated(frames, frameMs, 92, WebPEncoder.MAX_ANIMATED);
+            if (best != null) return best;
+            int lo = 10, hi = 92;
+            p.update("Comprimiendo (" + frames.size() + " cuadros)");
+            best = WebPEncoder.encodeAnimated(frames, frameMs, lo, WebPEncoder.MAX_ANIMATED);
+            if (best != null) {
+                while (hi - lo > 5) {
+                    int mid = (lo + hi) / 2;
+                    p.update("Ajustando calidad: " + mid);
+                    byte[] o = WebPEncoder.encodeAnimated(frames, frameMs, mid, WebPEncoder.MAX_ANIMATED);
+                    if (o != null) { best = o; lo = mid; } else hi = mid;
+                }
+                return best;
             }
             if (frames.size() <= 4) return null;
             List<Bitmap> half = new ArrayList<>();

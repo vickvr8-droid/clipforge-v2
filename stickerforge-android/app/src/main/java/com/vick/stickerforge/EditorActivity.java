@@ -2,6 +2,7 @@ package com.vick.stickerforge;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
@@ -41,6 +42,9 @@ public class EditorActivity extends Activity {
     private TextView timeLbl;
     private RadioGroup fpsGroup;
     private long durMs;
+    private boolean trimmed;
+    private int fpsChoice = 10;
+    private long trimStart, trimLen;
 
     @Override
     protected void onCreate(Bundle b) {
@@ -49,8 +53,23 @@ public class EditorActivity extends Activity {
         packs = PackStore.load(this);
         pack = PackStore.find(packs, getIntent().getStringExtra("id"));
         Uri uri = getIntent().getData();
+        trimmed = getIntent().getBooleanExtra("trimmed", false);
+        if (!trimmed && StickerMaker.isVideo(this, uri)) {
+            // Videos pasan primero por la pantalla de fragmento y recorte
+            startActivity(new Intent(this, VideoTrimActivity.class).setData(uri)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    .putExtras(getIntent()).putExtra("animated", pack.animated));
+            finish();
+            return;
+        }
         try {
-            src = StickerMaker.open(this, uri);
+            if (trimmed) {
+                src = new StickerMaker.CroppedSource(StickerMaker.open(this, uri, 2048), getIntent().getFloatArrayExtra("crop"));
+                trimStart = getIntent().getLongExtra("start", 0);
+                trimLen = Math.max(500, getIntent().getLongExtra("end", 3000) - trimStart);
+            } else {
+                src = StickerMaker.open(this, uri);
+            }
         } catch (Exception e) {
             Toast.makeText(this, "No se pudo abrir el archivo: " + e.getMessage(), Toast.LENGTH_LONG).show();
             finish();
@@ -87,10 +106,26 @@ public class EditorActivity extends Activity {
         tab(tabs, "⭕ Forma", this::showShape);
         tab(tabs, "🔤 Texto", this::showText);
         tab(tabs, "⬜ Borde", this::showBorder);
-        if (durMs > 0) tab(tabs, "⏱ Tiempo", this::showTime);
+        if (durMs > 0 && !trimmed) tab(tabs, "⏱ Tiempo", this::showTime);
 
         // Controles de tiempo se crean una vez para conservar sus valores
-        if (durMs > 0) buildTimeControls();
+        if (durMs > 0 && !trimmed) buildTimeControls();
+
+        if (trimmed && pack.animated) {
+            l.addView(Ui.label(this, "Fluidez (más fps = más suave, pero menos calidad por cuadro)"));
+            RadioGroup fg = new RadioGroup(this);
+            fg.setOrientation(RadioGroup.HORIZONTAL);
+            for (int f : new int[]{8, 10, 12, 15, 20}) {
+                RadioButton rb = new RadioButton(this);
+                rb.setText(String.valueOf(f));
+                rb.setId(2000 + f);
+                fg.addView(rb);
+            }
+            fg.check(2012);
+            fpsChoice = 12;
+            fg.setOnCheckedChangeListener((g, i) -> fpsChoice = i - 2000);
+            l.addView(fg);
+        }
 
         l.addView(Ui.label(this, "Emojis (1 a 3)"));
         emoji = new EditText(this);
@@ -105,7 +140,7 @@ public class EditorActivity extends Activity {
         setContentView(sv);
 
         new Thread(() -> {
-            Bitmap f = src.frameAt(0);
+            Bitmap f = src.frameAt(trimStart);
             runOnUiThread(() -> {
                 if (f == null) {
                     Toast.makeText(this, "No se pudo leer el archivo", Toast.LENGTH_LONG).show();
@@ -293,8 +328,8 @@ public class EditorActivity extends Activity {
         }
     }
 
-    private long startMs() { return start == null ? 0 : start.getProgress() * 100L; }
-    private long lenMs() { return length == null ? 0 : 500 + length.getProgress() * 100L; }
+    private long startMs() { return trimmed ? trimStart : start == null ? 0 : start.getProgress() * 100L; }
+    private long lenMs() { return trimmed ? trimLen : length == null ? 0 : 500 + length.getProgress() * 100L; }
 
     private void updateTime() {
         long end = Math.min(durMs, startMs() + lenMs());
@@ -339,7 +374,7 @@ public class EditorActivity extends Activity {
         EditState st = canvas.state.copy();
         long s0 = startMs();
         long len = Math.max(500, Math.min(lenMs(), durMs - s0));
-        int fps = fpsGroup == null ? 10 : fpsGroup.getCheckedRadioButtonId() - 1000;
+        int fps = fpsGroup != null ? fpsGroup.getCheckedRadioButtonId() - 1000 : fpsChoice;
         String emo = cleanEmojis(emoji.getText().toString());
         Bitmap still = canvas.frame;
         new Thread(() -> {

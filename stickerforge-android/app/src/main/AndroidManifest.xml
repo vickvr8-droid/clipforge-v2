@@ -15,6 +15,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".PackActivity" />
+        <activity android:name=".VideoTrimActivity" />
         <activity android:name=".ShareActivity" android:exported="true"
             android:label="Hacer sticker" android:theme="@android:style/Theme.DeviceDefault.Dialog">
             <intent-filter>
