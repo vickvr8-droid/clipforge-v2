@@ -33,6 +33,7 @@ public class VideoTrimActivity extends Activity {
     private Button play;
     private int vw = 1, vh = 1;
     private boolean animated;
+    private boolean handedOff;
     private final Handler h = new Handler(Looper.getMainLooper());
     private final Runnable tick = new Runnable() {
         public void run() {
@@ -226,6 +227,7 @@ public class VideoTrimActivity extends Activity {
                 .putExtra("start", timeline.start)
                 .putExtra("end", timeline.end)
                 .putExtra("crop", new float[]{crop.r.left, crop.r.top, crop.r.right, crop.r.bottom});
+        handedOff = true;
         startActivity(i);
         finish();
     }
@@ -240,5 +242,6 @@ public class VideoTrimActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
         releasePlayer();
+        if (!handedOff && isFinishing()) TempFiles.delete(this, uri);
     }
 }

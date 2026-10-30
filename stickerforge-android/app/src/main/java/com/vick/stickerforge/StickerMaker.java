@@ -150,6 +150,11 @@ public class StickerMaker {
         int count = Math.max(2, (int) (lenMs / frameMs));
         List<Bitmap> frames = new ArrayList<>();
         boolean still = src.durationMs() <= 0;
+        if (still && st.anim == EditState.Anim.NONE) {
+            // Se ve fija, pero con 2 cuadros WhatsApp la acepta en un paquete animado
+            frameMs = 500;
+            count = 2;
+        }
         Bitmap base = still ? st.render(src.frameAt(0)) : null; // imagen fija: se dibuja una vez
         for (int i = 0; i < count; i++) {
             p.update((still ? "Animando cuadro " : "Extrayendo cuadro ") + (i + 1) + "/" + count);

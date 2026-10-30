@@ -26,6 +26,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle b) {
         super.onCreate(b);
         setTitle("Mis paquetes de stickers");
+        TempFiles.cleanOld(this);
         int pad = Ui.dp(this, 12);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);

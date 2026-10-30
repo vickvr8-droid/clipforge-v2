@@ -83,4 +83,41 @@ public class StickerMakerTest {
         Bitmap f0 = st.applyAnim(base, 0f), f1 = st.applyAnim(base, 0.25f);
         assertFalse(f0.sameAs(f1));
     }
+
+    @Test
+    public void stillImageWithoutEffectIsTwoFrameAnimated() throws Exception {
+        EditState st = new EditState();
+        st.baseW = 800;
+        st.baseH = 600;
+        st.fit(false);
+        byte[] w = StickerMaker.makeAnimated(new FakeImage(), 0, 1500, 15, st, m -> { });
+        assertNotNull(w);
+        TestUtil.write("image_fija.webp", w);
+        int anmf = 0;
+        for (String c : TestUtil.chunks(w)) if (c.startsWith("ANMF")) anmf++;
+        assertEquals(2, anmf);
+        assertTrue(w.length <= WebPEncoder.MAX_ANIMATED);
+    }
+
+    @Test
+    public void tempFilesAreRecognizedAndDeleted() throws Exception {
+        android.content.Context c = org.robolectric.RuntimeEnvironment.getApplication();
+        java.io.File tmp = new java.io.File(c.getCacheDir(), "share_123.img");
+        java.io.File other = new java.io.File(c.getCacheDir(), "otro.img");
+        tmp.createNewFile();
+        other.createNewFile();
+        TempFiles.delete(c, android.net.Uri.fromFile(other)); // no es temporal: no se toca
+        TempFiles.delete(c, android.net.Uri.parse("content://media/external/images/1"));
+        assertTrue(other.exists());
+        TempFiles.delete(c, android.net.Uri.fromFile(tmp));
+        assertFalse(tmp.exists());
+        java.io.File old = new java.io.File(c.getCacheDir(), "giphy_1.gif");
+        old.createNewFile();
+        old.setLastModified(System.currentTimeMillis() - 2 * 3600 * 1000);
+        java.io.File fresh = new java.io.File(c.getCacheDir(), "giphy_2.gif");
+        fresh.createNewFile();
+        TempFiles.cleanOld(c);
+        assertFalse(old.exists());
+        assertTrue(fresh.exists());
+    }
 }

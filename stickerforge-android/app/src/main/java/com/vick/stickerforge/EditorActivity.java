@@ -43,6 +43,7 @@ public class EditorActivity extends Activity {
     private RadioGroup fpsGroup;
     private long durMs;
     private boolean stillInAnimated;
+    private boolean handedOff;
     private int animLenMs = 1500;
     private boolean trimmed;
     private int fpsChoice = 10;
@@ -62,6 +63,7 @@ public class EditorActivity extends Activity {
         trimmed = getIntent().getBooleanExtra("trimmed", false);
         if (!trimmed && StickerMaker.isVideo(this, uri)) {
             // Videos pasan primero por la pantalla de fragmento y recorte
+            handedOff = true;
             startActivity(new Intent(this, VideoTrimActivity.class).setData(uri)
                     .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     .putExtras(getIntent()).putExtra("animated", pack.animated));
@@ -110,7 +112,7 @@ public class EditorActivity extends Activity {
         tab(tabs, "⬜ Borde", this::showBorder);
         if (durMs > 0 && !trimmed) tab(tabs, "⏱ Tiempo", this::showTime);
         if (pack.animated) tab(tabs, "✨ Animación", this::showAnim);
-        if (stillInAnimated) canvas.state.anim = EditState.Anim.PULSE;
+
 
         // Controles de tiempo se crean una vez para conservar sus valores
         if (durMs > 0 && !trimmed) buildTimeControls();
@@ -295,12 +297,12 @@ public class EditorActivity extends Activity {
     private void showAnim() {
         panel.removeAllViews();
         if (stillInAnimated) {
-            TextView t = Ui.label(this, "Este paquete es animado: la imagen necesita un movimiento.");
+            TextView t = Ui.label(this, "Por defecto la imagen queda fija (la app la convierte sola). Si quieres, dale movimiento:");
             t.setTextSize(12);
             panel.addView(t);
         }
         LinearLayout r = row();
-        if (!stillInAnimated) add(r, "Ninguna", () -> setAnim(EditState.Anim.NONE));
+        add(r, "Ninguna", () -> setAnim(EditState.Anim.NONE));
         add(r, "💓 Latido", () -> setAnim(EditState.Anim.PULSE));
         add(r, "🫨 Temblor", () -> setAnim(EditState.Anim.SHAKE));
         add(r, "🔄 Girar", () -> setAnim(EditState.Anim.SPIN));
@@ -464,5 +466,7 @@ public class EditorActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
         if (src != null) src.release();
+        // La copia temporal ya no hace falta: el sticker quedó guardado (o se canceló)
+        if (!handedOff && isFinishing()) TempFiles.delete(this, getIntent().getData());
     }
 }
