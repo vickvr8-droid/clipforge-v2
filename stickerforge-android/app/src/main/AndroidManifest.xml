@@ -15,6 +15,22 @@
             </intent-filter>
         </activity>
         <activity android:name=".PackActivity" />
+        <activity android:name=".ShareActivity" android:exported="true"
+            android:label="Hacer sticker" android:theme="@android:style/Theme.DeviceDefault.Dialog">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="video/*" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="image/*" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+        </activity>
         <activity android:name=".GiphyActivity" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".EditorActivity" android:windowSoftInputMode="adjustResize" />
         <provider android:name=".StickerContentProvider"
