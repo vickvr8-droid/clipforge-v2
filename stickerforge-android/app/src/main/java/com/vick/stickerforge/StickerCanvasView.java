@@ -150,9 +150,15 @@ public class StickerCanvasView extends View {
                     refresh();
                 }
                 break;
-            case MotionEvent.ACTION_POINTER_UP:
-                pointers = 0; // evita saltos al levantar un dedo
+            case MotionEvent.ACTION_POINTER_UP: {
+                // sigue arrastrando con el dedo que queda, sin saltos
+                int keep = e.getActionIndex() == 0 ? 1 : 0;
+                lastX = e.getX(keep) / s;
+                lastY = e.getY(keep) / s;
+                pointers = e.getPointerCount() - 1 == 1 ? 1 : 2;
+                if (pointers == 2) startTwo(e, s);
                 break;
+            }
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
                 pointers = 0;

@@ -52,6 +52,10 @@ public class EditorActivity extends Activity {
         setTitle("Editar sticker");
         packs = PackStore.load(this);
         pack = PackStore.find(packs, getIntent().getStringExtra("id"));
+        if (pack == null) {
+            finish();
+            return;
+        }
         Uri uri = getIntent().getData();
         trimmed = getIntent().getBooleanExtra("trimmed", false);
         if (!trimmed && StickerMaker.isVideo(this, uri)) {
@@ -350,7 +354,7 @@ public class EditorActivity extends Activity {
         }).start();
     }
 
-    private String cleanEmojis(String in) {
+    static String cleanEmojis(String in) {
         StringBuilder out = new StringBuilder();
         BreakIterator it = BreakIterator.getCharacterInstance();
         it.setText(in);

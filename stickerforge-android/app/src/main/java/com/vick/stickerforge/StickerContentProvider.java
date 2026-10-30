@@ -78,7 +78,9 @@ public class StickerContentProvider extends ContentProvider {
         if (MATCHER.match(uri) != ASSET) throw new FileNotFoundException(uri.toString());
         List<String> seg = uri.getPathSegments();
         String id = seg.get(seg.size() - 2), name = seg.get(seg.size() - 1);
-        if (name.contains("/") || name.contains("..") || id.contains("..")) throw new FileNotFoundException(name);
+        if (!id.matches("[A-Za-z0-9_-]+") || !name.matches("[A-Za-z0-9_-]+\\.(webp|png)")) {
+            throw new FileNotFoundException(name);
+        }
         File f = new File(PackStore.packDir(getContext(), id), name);
         return new AssetFileDescriptor(ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY),
                 0, AssetFileDescriptor.UNKNOWN_LENGTH);

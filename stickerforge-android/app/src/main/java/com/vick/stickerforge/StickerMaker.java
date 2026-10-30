@@ -157,6 +157,7 @@ public class StickerMaker {
             if (!(src instanceof ImageSource)) raw.recycle();
         }
         if (frames.size() < 2) return null;
+        while (frames.size() > 2 && frames.size() * frameMs > 10000) frames.remove(frames.size() - 1);
         while (true) {
             // Busca la mayor calidad que entre en 500 KB
             p.update("Comprimiendo (" + frames.size() + " cuadros, calidad 92)");
@@ -178,6 +179,7 @@ public class StickerMaker {
             List<Bitmap> half = new ArrayList<>();
             for (int i = 0; i < frames.size(); i += 2) half.add(frames.get(i));
             frames = half;
+            while (frames.size() > 2 && frames.size() * frameMs * 2 > 10000) frames.remove(frames.size() - 1);
             frameMs *= 2;
         }
     }

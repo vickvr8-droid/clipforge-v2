@@ -1,14 +1,14 @@
 package com.vick.stickerforge;
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffXfermode;
 import android.graphics.RectF;
+import android.graphics.Shader;
 import android.graphics.Typeface;
 
 import java.util.ArrayList;
@@ -149,12 +149,13 @@ public class EditState {
         }
         Path mask = shapePath();
         if (mask != null) {
-            Paint mp = new Paint(Paint.ANTI_ALIAS_FLAG);
-            mp.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_IN));
-            Bitmap mb = Bitmap.createBitmap(S, S, Bitmap.Config.ALPHA_8);
-            Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
-            new Canvas(mb).drawPath(mask, fill);
-            cc.drawBitmap(mb, 0, 0, mp);
+            // rellena la forma usando la imagen como "pintura": recorte con borde suavizado
+            Bitmap masked = Bitmap.createBitmap(S, S, Bitmap.Config.ARGB_8888);
+            Paint sp = new Paint(Paint.ANTI_ALIAS_FLAG);
+            sp.setShader(new BitmapShader(content, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP));
+            new Canvas(masked).drawPath(mask, sp);
+            content.recycle();
+            content = masked;
         }
 
         Bitmap out = Bitmap.createBitmap(S, S, Bitmap.Config.ARGB_8888);

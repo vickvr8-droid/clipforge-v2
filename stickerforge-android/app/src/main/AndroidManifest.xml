@@ -17,7 +17,7 @@
         <activity android:name=".PackActivity" />
         <activity android:name=".VideoTrimActivity" />
         <activity android:name=".ShareActivity" android:exported="true"
-            android:label="Hacer sticker" android:theme="@android:style/Theme.DeviceDefault.Dialog">
+            android:label="Hacer sticker" android:theme="@style/Translucent">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
