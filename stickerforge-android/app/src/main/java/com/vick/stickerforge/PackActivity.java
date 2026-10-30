@@ -41,7 +41,12 @@ public class PackActivity extends Activity {
         info = new TextView(this);
         root.addView(info);
         Button add = Ui.button(this, "+ Agregar sticker");
-        add.setOnClickListener(v -> pick());
+        add.setOnClickListener(v -> new AlertDialog.Builder(this).setTitle("¿De dónde?")
+                .setItems(new String[]{"📁 Galería / archivos", "🔎 Buscar en GIPHY"}, (d, w) -> {
+                    if (w == 0) pick();
+                    else if (pack.stickers.size() >= 30) Toast.makeText(this, "Máximo 30 stickers por paquete", Toast.LENGTH_LONG).show();
+                    else startActivity(new Intent(this, GiphyActivity.class).putExtra("id", id));
+                }).show());
         root.addView(add);
         grid = new GridView(this);
         grid.setNumColumns(3);

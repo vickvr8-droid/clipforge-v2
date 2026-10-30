@@ -24,7 +24,10 @@ public class StickerMaker {
 
     public static FrameSource open(Context c, Uri uri) throws Exception {
         String type = c.getContentResolver().getType(uri);
-        if (type == null) type = "";
+        if (type == null) {
+            String p = String.valueOf(uri.getPath()).toLowerCase();
+            type = p.endsWith(".mp4") ? "video/mp4" : p.endsWith(".gif") ? "image/gif" : "";
+        }
         if (type.startsWith("video/")) return new VideoSource(c, uri);
         if (type.equals("image/gif")) return new GifSource(c, uri);
         return new ImageSource(c, uri);

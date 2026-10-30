@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
     <queries>
         <package android:name="com.whatsapp" />
         <package android:name="com.whatsapp.w4b" />
@@ -14,6 +15,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".PackActivity" />
+        <activity android:name=".GiphyActivity" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".EditorActivity" android:windowSoftInputMode="adjustResize" />
         <provider android:name=".StickerContentProvider"
             android:authorities="com.vick.stickerforge.stickercontentprovider"
