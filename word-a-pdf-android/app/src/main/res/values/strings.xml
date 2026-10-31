@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Word a PDF</string>
+    <string name="titulo">Convertir Word a PDF</string>
+    <string name="descripcion">Elige un archivo Word (.docx) y se convertirá a PDF. El PDF se genera sin contraseña ni restricciones: se puede editar, copiar, anotar e imprimir.</string>
+    <string name="elegir">Elegir archivo Word</string>
+    <string name="abrir">Abrir / editar PDF</string>
+    <string name="compartir">Compartir PDF</string>
+    <string name="convirtiendo">Convirtiendo…</string>
+    <string name="listo">Listo: %1$s</string>
+    <string name="error">Error al convertir: %1$s</string>
+    <string name="sin_app">No hay ninguna app para abrir PDF instalada</string>
+</resources>
