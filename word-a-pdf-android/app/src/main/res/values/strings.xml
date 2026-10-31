@@ -2,8 +2,14 @@
 <resources>
     <string name="app_name">Word a PDF</string>
     <string name="titulo">Convertir Word a PDF</string>
-    <string name="descripcion">Elige un archivo Word (.docx) y se convertirá a PDF. El PDF se genera sin contraseña ni restricciones: se puede editar, copiar, anotar e imprimir.</string>
-    <string name="elegir">Elegir archivo Word</string>
+    <string name="descripcion">Elige un Word (.docx) o un documento de Google Docs y se convertirá a PDF. El PDF se genera sin contraseña ni restricciones: se puede editar, copiar, anotar e imprimir.</string>
+    <string name="ayuda_docs">Desde Google Docs también puedes: ⋮ → Compartir y exportar → Enviar una copia → Word (.docx) → Word a PDF.</string>
+    <string name="elegir">Elegir Word o Google Docs</string>
+    <string name="whatsapp">Enviar por WhatsApp</string>
+    <string name="guardar">Guardar en el teléfono</string>
+    <string name="guardado">PDF guardado</string>
+    <string name="error_guardar">No se pudo guardar el PDF</string>
+    <string name="sin_whatsapp">WhatsApp no está instalado</string>
     <string name="abrir">Abrir / editar PDF</string>
     <string name="compartir">Compartir PDF</string>
     <string name="convirtiendo">Convirtiendo…</string>

@@ -19,6 +19,14 @@
         android:text="@string/descripcion"
         android:textSize="15sp" />
 
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/ayuda_docs"
+        android:textColor="#666666"
+        android:textSize="13sp" />
+
     <Button
         android:id="@+id/btnElegir"
         android:layout_width="match_parent"
@@ -42,11 +50,13 @@
         android:textSize="15sp" />
 
     <Button
-        android:id="@+id/btnAbrir"
+        android:id="@+id/btnWhatsApp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
-        android:text="@string/abrir"
+        android:backgroundTint="#25D366"
+        android:text="@string/whatsapp"
+        android:textColor="#FFFFFF"
         android:visibility="gone" />
 
     <Button
@@ -54,5 +64,19 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/compartir"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/btnGuardar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/guardar"
+        android:visibility="gone" />
+
+    <Button
+        android:id="@+id/btnAbrir"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/abrir"
         android:visibility="gone" />
 </LinearLayout>

@@ -6,10 +6,11 @@ El PDF se genera **sin contraseña ni restricciones de permisos**: se puede edit
 copiar texto e imprimir con cualquier editor de PDF. El texto es real (no una imagen).
 
 ## Uso
-1. "Elegir archivo Word" → selecciona el `.docx`.
-2. Elige dónde guardar el PDF.
-3. "Abrir / editar PDF" o "Compartir PDF".
+1. "Elegir Word o Google Docs" → selecciona un `.docx` o un documento de Google Docs
+   (desde Drive: Drive lo exporta a Word y la app lo convierte).
+2. "Enviar por WhatsApp", "Compartir", "Guardar en el teléfono" o "Abrir / editar PDF".
 
+Desde la app Google Docs: ⋮ → Compartir y exportar → Enviar una copia → Word (.docx) → Word a PDF.
 También aparece en "Abrir con" / "Compartir" al tocar un `.docx` en otras apps.
 
 ## Qué conserva

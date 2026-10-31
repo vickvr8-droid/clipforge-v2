@@ -22,5 +22,11 @@
                 <data android:mimeType="application/vnd.openxmlformats-officedocument.wordprocessingml.document" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name=".PdfProvider"
+            android:authorities="${applicationId}.archivos"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>
